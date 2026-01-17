@@ -2,12 +2,13 @@ import { Box, VStack, Tooltip, IconButton } from "@chakra-ui/react";
 import { SettingsIcon, QuestionIcon } from "@chakra-ui/icons";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { FaUsers, FaHeadset } from "react-icons/fa";
+import { FaUsers, FaHeadset, FaTrophy, FaGamepad } from "react-icons/fa";
 
 const LeftNav = () => {
     const router = useRouter();
     const links = [
-        { path: "/friends", icon: FaUsers, label: "Friends" },
+        { path: "/lobby", icon: FaGamepad, label: "Game Lobby" },
+        { path: "/leaderboard", icon: FaTrophy, label: "Leaderboard" },
         { path: "/", icon: QuestionIcon, label: "Help" },
         { path: "/support", icon: FaHeadset, label: "Support" },
         { path: "/profile", icon: SettingsIcon, label: "Settings" },

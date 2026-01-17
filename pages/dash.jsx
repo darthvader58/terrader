@@ -186,7 +186,7 @@ const Dash = () => {
                             </HStack>
                         </Box>
 
-                        <Link href="/play">
+                        <Link href="/lobby">
                             <Button
                                 size="lg"
                                 colorScheme="green"
@@ -200,7 +200,26 @@ const Dash = () => {
                                 }}
                                 transition="all 0.3s"
                             >
-                                Start New Game
+                                Join Game Lobby
+                            </Button>
+                        </Link>
+
+                        <Link href="/leaderboard">
+                            <Button
+                                size="lg"
+                                colorScheme="blue"
+                                variant="outline"
+                                w="100%"
+                                h="60px"
+                                fontSize="xl"
+                                leftIcon={<Icon as={FaTrophy} />}
+                                _hover={{
+                                    transform: "scale(1.02)",
+                                    bg: "blue.900",
+                                }}
+                                transition="all 0.3s"
+                            >
+                                View Leaderboard
                             </Button>
                         </Link>
                     </VStack>

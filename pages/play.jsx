@@ -14,8 +14,10 @@ import {
     Badge,
     useToast,
     Divider,
+    Icon,
 } from "@chakra-ui/react";
 import { TimeIcon, StarIcon } from "@chakra-ui/icons";
+import { FaTrophy } from "react-icons/fa";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import Protect from "@/components/Protect";
@@ -25,10 +27,12 @@ import TradingPanel from "@/components/TradingPanel";
 import NewsPanel from "@/components/NewsPanel";
 import { CRYPTO_COINS, GAME_CONFIG, calculateCarbonScore, calculateProfit, generatePriceMovement, calculateCarbonFootprint } from "@/utils/gameLogic";
 import { useAuth } from "@/contexts/AuthContext";
+import { subscribeToRoom, updatePlayerScore, finishGame } from "@/utils/gameRoom";
 
 const Play = () => {
     const { user } = useAuth();
     const router = useRouter();
+    const { roomId } = router.query;
     const toast = useToast();
     
     const [timeLeft, setTimeLeft] = useState(GAME_CONFIG.GAME_DURATION);
@@ -44,6 +48,8 @@ const Play = () => {
     const [news, setNews] = useState([]);
     const [newsLoading, setNewsLoading] = useState(false);
     const [leaderboardRank, setLeaderboardRank] = useState(null);
+    const [roomData, setRoomData] = useState(null);
+    const [liveLeaderboard, setLiveLeaderboard] = useState([]);
 
     useEffect(() => {
         const initialPrices = {};
@@ -71,7 +77,7 @@ const Play = () => {
             setTimeLeft(prev => {
                 if (prev <= 0) {
                     clearInterval(timer);
-                    router.push('/won');
+                    handleGameEnd();
                     return 0;
                 }
                 return prev - 1;
@@ -80,6 +86,54 @@ const Play = () => {
 
         return () => clearInterval(timer);
     }, [router]);
+
+    useEffect(() => {
+        if (!roomId || !user) return;
+
+        const unsubscribe = subscribeToRoom(roomId, (room) => {
+            setRoomData(room);
+            
+            if (room.leaderboard) {
+                const leaderboardArray = Object.values(room.leaderboard)
+                    .sort((a, b) => b.carbonScore - a.carbonScore)
+                    .map((player, index) => ({
+                        ...player,
+                        rank: index + 1
+                    }));
+                setLiveLeaderboard(leaderboardArray);
+                
+                const myRank = leaderboardArray.find(p => p.userId === user.uid);
+                setLeaderboardRank(myRank?.rank || null);
+            }
+        });
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, [roomId, user]);
+
+    useEffect(() => {
+        if (!roomId || !user) return;
+        
+        const scoreInterval = setInterval(async () => {
+            const currentProfit = calculateProfit(portfolio, Object.fromEntries(
+                Object.entries(prices).map(([id, p]) => [id, p.current])
+            ));
+            
+            await updatePlayerScore(roomId, user.uid, carbonScore, currentProfit, portfolio);
+        }, 10000);
+
+        return () => clearInterval(scoreInterval);
+    }, [roomId, user, carbonScore, portfolio, prices]);
+
+    const handleGameEnd = async () => {
+        if (roomId) {
+            await finishGame(roomId);
+            router.push(`/results?roomId=${roomId}`);
+        } else {
+            router.push('/dash');
+        }
+    };
 
     useEffect(() => {
         const priceInterval = setInterval(() => {
@@ -305,6 +359,60 @@ const Play = () => {
                         <Divider />
 
                         <NewsPanel news={news} loading={newsLoading} />
+
+                        {liveLeaderboard.length > 0 && (
+                            <>
+                                <Divider />
+                                <VStack spacing={3} w="100%" align="stretch">
+                                    <HStack>
+                                        <Icon as={FaTrophy} color="yellow.400" />
+                                        <Text fontWeight="bold" fontSize="md">
+                                            Live Leaderboard
+                                        </Text>
+                                    </HStack>
+                                    <VStack spacing={2} maxH="300px" overflowY="auto">
+                                        {liveLeaderboard.slice(0, 10).map((player, index) => (
+                                            <HStack
+                                                key={player.userId}
+                                                w="100%"
+                                                p={2}
+                                                bg={player.userId === user?.uid ? 'green.900' : 'brandBlack.200'}
+                                                borderRadius="md"
+                                                justify="space-between"
+                                            >
+                                                <HStack spacing={2}>
+                                                    <Badge
+                                                        colorScheme={index < 3 ? 'yellow' : 'gray'}
+                                                        fontSize="xs"
+                                                    >
+                                                        #{player.rank}
+                                                    </Badge>
+                                                    <Text fontSize="sm" fontWeight={player.userId === user?.uid ? 'bold' : 'normal'}>
+                                                        {player.userId === user?.uid ? 'You' : `Player ${player.userId.slice(-4)}`}
+                                                    </Text>
+                                                </HStack>
+                                                <Text fontSize="sm" fontWeight="bold" color="green.400">
+                                                    {player.carbonScore}
+                                                </Text>
+                                            </HStack>
+                                        ))}
+                                    </VStack>
+                                    {leaderboardRank && (
+                                        <Box
+                                            p={3}
+                                            bg="green.900"
+                                            borderRadius="md"
+                                            borderWidth={2}
+                                            borderColor="green.400"
+                                        >
+                                            <Text fontSize="sm" textAlign="center">
+                                                Your Rank: <Text as="span" fontWeight="bold" fontSize="lg">#{leaderboardRank}</Text> / {liveLeaderboard.length}
+                                            </Text>
+                                        </Box>
+                                    )}
+                                </VStack>
+                            </>
+                        )}
                     </VStack>
                 </Box>
             </Flex>
