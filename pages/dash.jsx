@@ -20,8 +20,11 @@ import { TimeIcon, CheckCircleIcon, WarningIcon, StarIcon } from "@chakra-ui/ico
 import { FaPlay, FaTrophy } from "react-icons/fa";
 import Link from "next/link";
 import Protect from "@/components/Protect";
+import { useAuth } from "@/contexts/AuthContext";
 
-const Dash = ({ authed, user }) => {
+const Dash = () => {
+    const { user } = useAuth();
+    
     const games = [
         {
             ranking: "12/79",
@@ -47,16 +50,16 @@ const Dash = ({ authed, user }) => {
     ];
 
     const stats = [
-        { label: "Total Games", value: "24", icon: FaPlay },
-        { label: "Wins", value: "15", icon: FaTrophy },
-        { label: "Avg Score", value: "285", icon: StarIcon },
-        { label: "Best Rank", value: "3/100", icon: CheckCircleIcon },
+        { label: "Total Games", value: user?.totalGames || "0", icon: FaPlay },
+        { label: "Wins", value: user?.wins || "0", icon: FaTrophy },
+        { label: "Carbon Score", value: user?.carbonScore || "0", icon: StarIcon },
+        { label: "Best Rank", value: user?.highestRank || "N/A", icon: CheckCircleIcon },
     ];
 
     return (
-        <Protect authed={authed}>
+        <Protect>
             <Box px={{ base: 6, md: 12, lg: 20 }} pt={10} minH="100vh">
-                <Nav user={user} />
+                <Nav />
                 <LeftNav />
 
                 <Box mt={12} px={{ base: 4, md: 12, lg: 32 }}>

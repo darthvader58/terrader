@@ -1,119 +1,182 @@
 import LeftNav from "@/components/LeftNav";
 import Nav from "@/components/Nav";
 import Image from "next/image";
-import { IoAddCircleOutline, IoLeaf } from "react-icons/io5";
-import { SiWebmoney } from "react-icons/si";
+import { TimeIcon, ViewIcon, StarIcon, InfoIcon } from "@chakra-ui/icons";
 import {
     Box,
     Input,
-    Flex,
-    Tag,
+    Badge,
     Heading,
     Text,
+    VStack,
+    HStack,
+    SimpleGrid,
+    Button,
     Divider,
+    Icon,
 } from "@chakra-ui/react";
-import { RxClock } from "react-icons/rx";
+import { POWER_UPS } from "@/utils/gameLogic";
+import Protect from "@/components/Protect";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Profile = () => {
-    const powers = [
-        {
-            icon: <RxClock />,
-            cost: 15,
-        },
-        {
-            icon: <RxClock />,
-            cost: 15,
-        },
-        {
-            icon: <RxClock />,
-            cost: 15,
-        },
-        {
-            icon: <RxClock />,
-            cost: 15,
-        },
-    ];
+    const { user } = useAuth();
+    
+    const iconMap = {
+        time: TimeIcon,
+        view: ViewIcon,
+        star: StarIcon,
+        info: InfoIcon,
+    };
 
     return (
-        <Box px={20} pt={10}>
-            <Nav />
-            <LeftNav />
+        <Protect>
+            <Box px={{ base: 6, md: 12, lg: 20 }} pt={10} minH="100vh">
+                <Nav />
+                <LeftNav />
 
-            <Box px={72} mt={20}>
-                <Box p={10} bg="glass" rounded="xl" shadow="lg">
-                    <Flex>
-                        <Flex alignItems="center" w="50%">
-                            <Image
-                                src="/assets/avatar2.svg"
-                                alt="avatar"
-                                width={52}
-                                height={52}
-                            />
-                            &nbsp;&nbsp;&nbsp;&nbsp;
-                            <Input
-                                readOnly
-                                value="theVedanta"
-                                size="lg"
-                                disabled
-                                border="2px"
-                                fontWeight="medium"
-                                fontSize={20}
-                            />
-                        </Flex>
-                        <Flex alignItems="center" justifyContent="end" w="50%">
-                            <Tag px={6} py={3} fontSize={24}>
-                                Level: 42
-                            </Tag>
-                        </Flex>
-                    </Flex>
+                <Box px={{ base: 4, md: 12, lg: 48 }} mt={12}>
+                    <VStack spacing={8} align="stretch">
+                        <Box 
+                            bg="glass" 
+                            p={8} 
+                            borderRadius="xl" 
+                            borderWidth={2}
+                            borderColor="whiteAlpha.200"
+                        >
+                            <HStack spacing={8} mb={6}>
+                                <Box
+                                    borderRadius="full"
+                                    overflow="hidden"
+                                    border="3px solid"
+                                    borderColor="green.400"
+                                >
+                                    <Image
+                                        src={user?.photoURL || "/assets/avatar2.svg"}
+                                        alt="avatar"
+                                        width={80}
+                                        height={80}
+                                    />
+                                </Box>
+                                <VStack align="start" flex={1} spacing={2}>
+                                    <Input
+                                        value={user?.username || "Player"}
+                                        size="lg"
+                                        fontWeight="bold"
+                                        fontSize="2xl"
+                                        isReadOnly
+                                        variant="filled"
+                                        bg="brandBlack.200"
+                                    />
+                                    <HStack>
+                                        <Badge colorScheme="green" fontSize="md" px={3} py={1}>
+                                            Level {user?.level || 1}
+                                        </Badge>
+                                        <Badge colorScheme="blue" fontSize="md" px={3} py={1}>
+                                            {user?.carbonCredits || 0} Credits
+                                        </Badge>
+                                    </HStack>
+                                </VStack>
+                            </HStack>
 
-                    <Flex mt={10}>
-                        <Tag p={3} fontSize={24} mr={6}>
-                            <SiWebmoney />
-                            &nbsp;:&nbsp;&nbsp;&nbsp;240&nbsp;&nbsp;&nbsp;&nbsp;
-                            <Box>
-                                <IoAddCircleOutline />
-                            </Box>
-                        </Tag>
-                        <Tag p={3} fontSize={24}>
-                            <IoLeaf />
-                            &nbsp;:&nbsp;&nbsp;&nbsp;240
-                        </Tag>
-                    </Flex>
+                            <Divider my={6} />
 
-                    <Heading mt={10}>Power-ups</Heading>
-                    <br />
-                    <Flex
-                        sx={{
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                        }}
-                    >
-                        {powers.map((power, i) => (
-                            <Flex
-                                key={i}
-                                direction="column"
-                                alignItems="center"
-                                bg="brandBlack.200"
-                                w="22%"
-                                py={6}
-                                px={6}
-                                rounded="xl"
-                            >
-                                <Text fontSize={72} color="green.400">
-                                    {power.icon}
-                                </Text>
-                                <Divider my={4} />
-                                <Flex alignItems="center" fontSize={28}>
-                                    {power.cost}&nbsp;&nbsp;&nbsp;
-                                    <SiWebmoney />
-                                </Flex>
-                            </Flex>
-                        ))}
-                    </Flex>
+                            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+                                <Box bg="brandBlack.100" p={4} borderRadius="lg">
+                                    <Text fontSize="sm" color="gray.400" mb={2}>
+                                        Total Carbon Score
+                                    </Text>
+                                    <Text fontSize="3xl" fontWeight="bold" color="green.400">
+                                        {user?.carbonScore || 0}
+                                    </Text>
+                                </Box>
+                                <Box bg="brandBlack.100" p={4} borderRadius="lg">
+                                    <Text fontSize="sm" color="gray.400" mb={2}>
+                                        Highest Rank
+                                    </Text>
+                                    <Text fontSize="3xl" fontWeight="bold" color="blue.400">
+                                        {user?.highestRank || "N/A"}
+                                    </Text>
+                                </Box>
+                            </SimpleGrid>
+                        </Box>
+
+                        <Box>
+                            <Heading size="lg" mb={6}>
+                                Power-ups Store
+                            </Heading>
+                            <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6}>
+                                {POWER_UPS.map((power, i) => {
+                                    const IconComponent = iconMap[power.icon];
+                                    return (
+                                        <Box
+                                            key={i}
+                                            bg="brandBlack.100"
+                                            p={6}
+                                            borderRadius="xl"
+                                            borderWidth={2}
+                                            borderColor="whiteAlpha.200"
+                                            _hover={{
+                                                borderColor: "green.400",
+                                                transform: "translateY(-8px)",
+                                                boxShadow: "0 8px 20px rgba(28, 200, 128, 0.3)",
+                                            }}
+                                            transition="all 0.3s"
+                                        >
+                                            <VStack spacing={4}>
+                                                <Icon
+                                                    as={IconComponent}
+                                                    boxSize={16}
+                                                    color="green.400"
+                                                />
+                                                <VStack spacing={2}>
+                                                    <Text fontWeight="bold" fontSize="lg" textAlign="center">
+                                                        {power.name}
+                                                    </Text>
+                                                    <Text fontSize="sm" color="gray.400" textAlign="center" minH="40px">
+                                                        {power.description}
+                                                    </Text>
+                                                </VStack>
+                                                <Divider />
+                                                <Button
+                                                    colorScheme="green"
+                                                    w="100%"
+                                                    leftIcon={<StarIcon />}
+                                                >
+                                                    {power.cost} Credits
+                                                </Button>
+                                            </VStack>
+                                        </Box>
+                                    );
+                                })}
+                            </SimpleGrid>
+                        </Box>
+
+                        <Box 
+                            bg="glass" 
+                            p={6} 
+                            borderRadius="xl"
+                            borderWidth={2}
+                            borderColor="blue.400"
+                        >
+                            <HStack justify="space-between">
+                                <VStack align="start">
+                                    <Text fontWeight="bold" fontSize="lg">
+                                        Need More Credits?
+                                    </Text>
+                                    <Text fontSize="sm" color="gray.400">
+                                        Earn credits by playing games and achieving high carbon scores
+                                    </Text>
+                                </VStack>
+                                <Button colorScheme="blue" size="lg">
+                                    Learn More
+                                </Button>
+                            </HStack>
+                        </Box>
+                    </VStack>
                 </Box>
             </Box>
-        </Box>
+        </Protect>
     );
 };
 

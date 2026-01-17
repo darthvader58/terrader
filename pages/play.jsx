@@ -25,7 +25,8 @@ import TradingPanel from "@/components/TradingPanel";
 import NewsPanel from "@/components/NewsPanel";
 import { CRYPTO_COINS, GAME_CONFIG, calculateCarbonScore, calculateProfit, generatePriceMovement, calculateCarbonFootprint } from "@/utils/gameLogic";
 
-const Play = ({ authed, user }) => {
+const Play = () => {
+    const { user } = useAuth();
     const router = useRouter();
     const toast = useToast();
     
