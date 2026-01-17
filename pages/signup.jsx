@@ -20,6 +20,7 @@ import { ViewIcon, ViewOffIcon, CheckIcon } from "@chakra-ui/icons";
 import { FaGoogle } from "react-icons/fa";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import Head from "next/head";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -140,6 +141,10 @@ const SignUp = () => {
 
     return (
         <Box minH="100vh" bgGradient="linear(to-br, brandBlack.200, #1a1a1a)" py={20}>
+            <Head>
+                <title>Sign Up - Terrader</title>
+            </Head>
+            
             <Container maxW="md">
                 <VStack spacing={8}>
                     <VStack spacing={4}>

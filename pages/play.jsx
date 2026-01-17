@@ -24,6 +24,7 @@ import CoinSelector from "@/components/CoinSelector";
 import TradingPanel from "@/components/TradingPanel";
 import NewsPanel from "@/components/NewsPanel";
 import { CRYPTO_COINS, GAME_CONFIG, calculateCarbonScore, calculateProfit, generatePriceMovement, calculateCarbonFootprint } from "@/utils/gameLogic";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Play = () => {
     const { user } = useAuth();
@@ -227,7 +228,7 @@ const Play = () => {
     const secs = timeLeft % 60;
 
     return (
-        <Protect authed={authed}>
+        <Protect>
             <Flex h="100vh" overflow="hidden">
                 <Box flex={1} p={6} overflowY="auto">
                     <VStack spacing={6} align="stretch">

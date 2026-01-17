@@ -17,6 +17,7 @@ import { FaGoogle, FaLeaf, FaChartLine, FaTrophy, FaUsers } from "react-icons/fa
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Head from "next/head";
 import Link from "next/link";
 
 const Home = () => {
@@ -83,6 +84,11 @@ const Home = () => {
 
     return (
         <Box minH="100vh" position="relative" overflow="hidden">
+            <Head>
+                <title>Terrader - Crypto Trading Game for Environmental Awareness</title>
+                <meta name="description" content="A multiplayer crypto trading game that raises awareness about environmental impact" />
+            </Head>
+            
             <Box
                 position="absolute"
                 top={0}
