@@ -1,49 +1,45 @@
-import { Box, Flex } from "@chakra-ui/react";
+import { Box, VStack, Tooltip, IconButton } from "@chakra-ui/react";
+import { SettingsIcon, QuestionIcon } from "@chakra-ui/icons";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import {
-    MdAccountCircle,
-    MdManageAccounts,
-    MdQuestionMark,
-    MdSettings,
-    MdSupport,
-} from "react-icons/md";
+import { FaUsers, FaHeadset } from "react-icons/fa";
 
 const LeftNav = () => {
     const router = useRouter();
-    const links = {
-        "/friends": <MdManageAccounts />,
-        "/": <MdQuestionMark />,
-        "/support": <MdSupport />,
-        "/profile": <MdSettings />,
-    };
+    const links = [
+        { path: "/friends", icon: FaUsers, label: "Friends" },
+        { path: "/", icon: QuestionIcon, label: "Help" },
+        { path: "/support", icon: FaHeadset, label: "Support" },
+        { path: "/profile", icon: SettingsIcon, label: "Settings" },
+    ];
 
     return (
-        <Flex
-            direction="column"
-            justifyContent="space-between"
-            alignItems="center"
+        <VStack
             position="fixed"
-            bottom={20}
-            left={20}
+            bottom={8}
+            left={8}
+            spacing={4}
+            zIndex={10}
         >
-            {Object.keys(links).map((link) => (
-                <Link key={link} href={link}>
-                    <Box
-                        bg={router.route === link ? "brandBlack.200" : "glass"}
-                        p={3}
-                        rounded="xl"
-                        mt={8}
-                        fontSize={28}
-                        color={router.route === link ? "green.400" : "white"}
-                        transition="all 0.3s"
-                        _hover={{ bg: "brandBlack.100" }}
-                    >
-                        {links[link]}
-                    </Box>
+            {links.map((link) => (
+                <Link key={link.path} href={link.path}>
+                    <Tooltip label={link.label} placement="right" hasArrow>
+                        <IconButton
+                            icon={typeof link.icon === 'function' ? <link.icon /> : link.icon}
+                            aria-label={link.label}
+                            size="lg"
+                            bg={router.route === link.path ? "brandBlack.200" : "glass"}
+                            color={router.route === link.path ? "green.400" : "white"}
+                            _hover={{ 
+                                bg: "brandBlack.100",
+                                transform: "scale(1.1)"
+                            }}
+                            transition="all 0.2s"
+                        />
+                    </Tooltip>
                 </Link>
             ))}
-        </Flex>
+        </VStack>
     );
 };
 

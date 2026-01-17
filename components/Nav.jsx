@@ -1,59 +1,70 @@
-import { Box, Flex, Text } from "@chakra-ui/react";
+import { Box, Flex, Text, HStack, VStack, IconButton, Badge } from "@chakra-ui/react";
+import { AddIcon } from "@chakra-ui/icons";
 import Image from "next/image";
-import { MdAdd, MdAddCircle, MdAddCircleOutline } from "react-icons/md";
-import { SiWebmoney } from "react-icons/si";
 
-const Nav = () => {
+const Nav = ({ user }) => {
     return (
         <Flex
-            sx={{
-                width: "100%",
-                justifyContent: "space-between",
-                alignItems: "center",
-            }}
+            w="100%"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={6}
         >
-            <Flex alignItems="center">
+            <HStack spacing={4}>
                 <Image
                     src="/assets/logo.svg"
-                    width={100}
-                    height={100}
+                    width={80}
+                    height={80}
                     alt="Logo"
                 />
                 <Text
+                    fontSize={{ base: "3xl", md: "5xl", lg: "6xl" }}
+                    fontWeight="900"
                     sx={{
-                        ml: 5,
-                        fontSize: 90,
-                        fontWeight: 900,
-                        "-webkit-text-stroke-width": "3px",
+                        "-webkit-text-stroke-width": "2px",
                         "-webkit-text-stroke-color": "white",
                         color: "rgba(0, 0, 0, 0)",
                     }}
                 >
                     terrader
                 </Text>
-            </Flex>
+            </HStack>
 
-            <Flex alignItems="center">
-                <Box mr={16} fontWeight="bold" fontSize={18}>
-                    theVedanta
-                    <br />
-                    Lvl. 11
-                    <br />
-                    <Flex mt={2} alignItems="center">
-                        <SiWebmoney />
-                        &nbsp;200&nbsp;&nbsp;&nbsp;
-                        <Box cursor="pointer">
-                            <MdAddCircleOutline />
-                        </Box>
-                    </Flex>
+            <HStack spacing={6}>
+                <VStack align="flex-end" spacing={1}>
+                    <Text fontWeight="bold" fontSize="lg">
+                        {user?.username || 'Player'}
+                    </Text>
+                    <Badge colorScheme="green" fontSize="sm" px={2}>
+                        Level {user?.level || 1}
+                    </Badge>
+                    <HStack spacing={2} mt={1}>
+                        <Text fontSize="md" fontWeight="medium">
+                            {user?.carbonCredits || 0} Credits
+                        </Text>
+                        <IconButton
+                            icon={<AddIcon />}
+                            size="xs"
+                            colorScheme="green"
+                            variant="ghost"
+                            aria-label="Add credits"
+                        />
+                    </HStack>
+                </VStack>
+                <Box
+                    borderRadius="full"
+                    overflow="hidden"
+                    border="2px solid"
+                    borderColor="green.400"
+                >
+                    <Image
+                        src="/assets/avatar.svg"
+                        alt="avatar"
+                        width={70}
+                        height={70}
+                    />
                 </Box>
-                <Image
-                    src="/assets/avatar.svg"
-                    alt="avatar"
-                    width={100}
-                    height={100}
-                />
-            </Flex>
+            </HStack>
         </Flex>
     );
 };
