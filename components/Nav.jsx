@@ -1,8 +1,11 @@
-import { Box, Flex, Text, HStack, VStack, IconButton, Badge } from "@chakra-ui/react";
+import { Box, Flex, Text, HStack, VStack, IconButton, Badge, Button } from "@chakra-ui/react";
 import { AddIcon } from "@chakra-ui/icons";
 import Image from "next/image";
+import { useAuth } from "@/contexts/AuthContext";
 
-const Nav = ({ user }) => {
+const Nav = () => {
+    const { user, signOut } = useAuth();
+
     return (
         <Flex
             w="100%"
@@ -58,7 +61,7 @@ const Nav = ({ user }) => {
                     borderColor="green.400"
                 >
                     <Image
-                        src="/assets/avatar.svg"
+                        src={user?.photoURL || "/assets/avatar.svg"}
                         alt="avatar"
                         width={70}
                         height={70}
