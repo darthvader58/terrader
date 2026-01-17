@@ -1,177 +1,311 @@
 import {
     Box,
-    Button,
-    Divider,
     Flex,
-    FormLabel,
     Heading,
-    Input,
-    NumberDecrementStepper,
-    NumberIncrementStepper,
-    NumberInput,
-    NumberInputField,
-    NumberInputStepper,
     Text,
+    VStack,
+    HStack,
+    Stat,
+    StatLabel,
+    StatNumber,
+    StatHelpText,
+    StatArrow,
+    Progress,
+    Badge,
+    useToast,
+    Divider,
 } from "@chakra-ui/react";
-import { IoCloudyNight, IoLeaf } from "react-icons/io5";
-import Chart from "chart.js/auto";
-import { useEffect, useState } from "react";
+import { TimeIcon, StarIcon } from "@chakra-ui/icons";
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/router";
 import Protect from "@/components/Protect";
 import Graph from "@/components/Graph";
+import CoinSelector from "@/components/CoinSelector";
+import TradingPanel from "@/components/TradingPanel";
+import NewsPanel from "@/components/NewsPanel";
+import { CRYPTO_COINS, GAME_CONFIG, calculateCarbonScore, calculateProfit, generatePriceMovement, calculateCarbonFootprint } from "@/utils/gameLogic";
 
-const Play = ({ authed }) => {
-    const [mins, setMins] = useState(5);
-    const [secs, setSecs] = useState(0);
-    const news = ["Hello World", "Hello World", "Hello World", "Hello World"];
+const Play = ({ authed, user }) => {
+    const router = useRouter();
+    const toast = useToast();
+    
+    const [timeLeft, setTimeLeft] = useState(GAME_CONFIG.GAME_DURATION);
+    const [selectedCoin, setSelectedCoin] = useState(CRYPTO_COINS[0]);
+    const [prices, setPrices] = useState({});
+    const [priceHistory, setPriceHistory] = useState({});
+    const [portfolio, setPortfolio] = useState({
+        balance: GAME_CONFIG.INITIAL_BALANCE,
+        holdings: {}
+    });
+    const [carbonScore, setCarbonScore] = useState(0);
+    const [trades, setTrades] = useState([]);
+    const [news, setNews] = useState([]);
+    const [newsLoading, setNewsLoading] = useState(false);
+    const [leaderboardRank, setLeaderboardRank] = useState(null);
 
-    setTimeout(() => {
-        if (secs - 1 < 0) {
-            setSecs(60);
-            return setMins(mins - 1);
+    useEffect(() => {
+        const initialPrices = {};
+        const initialHistory = {};
+        
+        CRYPTO_COINS.forEach(coin => {
+            const basePrice = 50 + Math.random() * 50;
+            initialPrices[coin.id] = {
+                current: basePrice,
+                previous: basePrice,
+                change: 0
+            };
+            initialHistory[coin.id] = {
+                labels: ['0m'],
+                prices: [basePrice]
+            };
+        });
+        
+        setPrices(initialPrices);
+        setPriceHistory(initialHistory);
+    }, []);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setTimeLeft(prev => {
+                if (prev <= 0) {
+                    clearInterval(timer);
+                    router.push('/won');
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [router]);
+
+    useEffect(() => {
+        const priceInterval = setInterval(() => {
+            setPrices(prevPrices => {
+                const newPrices = {};
+                CRYPTO_COINS.forEach(coin => {
+                    const newsImpact = Math.random() - 0.5;
+                    const newPrice = generatePriceMovement(prevPrices[coin.id]?.current || 50, newsImpact);
+                    const change = ((newPrice - prevPrices[coin.id]?.current) / prevPrices[coin.id]?.current) * 100;
+                    
+                    newPrices[coin.id] = {
+                        current: newPrice,
+                        previous: prevPrices[coin.id]?.current,
+                        change: change
+                    };
+                });
+                return newPrices;
+            });
+
+            setPriceHistory(prevHistory => {
+                const newHistory = { ...prevHistory };
+                const elapsed = GAME_CONFIG.GAME_DURATION - timeLeft;
+                const timeLabel = `${(elapsed / 60).toFixed(1)}m`;
+                
+                CRYPTO_COINS.forEach(coin => {
+                    if (!newHistory[coin.id]) {
+                        newHistory[coin.id] = { labels: [], prices: [] };
+                    }
+                    newHistory[coin.id].labels.push(timeLabel);
+                    newHistory[coin.id].prices.push(prices[coin.id]?.current || 50);
+                    
+                    if (newHistory[coin.id].labels.length > 30) {
+                        newHistory[coin.id].labels.shift();
+                        newHistory[coin.id].prices.shift();
+                    }
+                });
+                
+                return newHistory;
+            });
+        }, GAME_CONFIG.PRICE_UPDATE_INTERVAL * 1000);
+
+        return () => clearInterval(priceInterval);
+    }, [timeLeft, prices]);
+
+    const fetchNews = useCallback(async () => {
+        setNewsLoading(true);
+        try {
+            const coin = CRYPTO_COINS[Math.floor(Math.random() * CRYPTO_COINS.length)];
+            const trend = Math.random() > 0.5 ? 'bullish' : 'bearish';
+            
+            const response = await fetch('/api/generate-news', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ coinName: coin.name, trend })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                setNews(prev => [{
+                    news: data.news,
+                    coin: data.coin,
+                    timestamp: data.timestamp
+                }, ...prev].slice(0, 4));
+            }
+        } catch (error) {
+            console.error('Failed to fetch news:', error);
+        } finally {
+            setNewsLoading(false);
         }
+    }, []);
 
-        setSecs(secs - 1);
-    }, 1000);
+    useEffect(() => {
+        fetchNews();
+        const newsInterval = setInterval(fetchNews, GAME_CONFIG.NEWS_UPDATE_INTERVAL * 1000);
+        return () => clearInterval(newsInterval);
+    }, [fetchNews]);
+
+    const handleTrade = async (type, coin, quantity, price) => {
+        const trade = { type, coin: coin.id, quantity, price, timestamp: Date.now() };
+        
+        if (type === 'buy') {
+            const cost = quantity * price;
+            if (cost > portfolio.balance) {
+                toast({
+                    title: "Insufficient balance",
+                    status: "error",
+                    duration: 2000,
+                });
+                return;
+            }
+            
+            setPortfolio(prev => ({
+                balance: prev.balance - cost,
+                holdings: {
+                    ...prev.holdings,
+                    [coin.id]: {
+                        quantity: (prev.holdings[coin.id]?.quantity || 0) + quantity,
+                        avgPrice: ((prev.holdings[coin.id]?.quantity || 0) * (prev.holdings[coin.id]?.avgPrice || 0) + cost) / ((prev.holdings[coin.id]?.quantity || 0) + quantity)
+                    }
+                }
+            }));
+        } else {
+            const holding = portfolio.holdings[coin.id];
+            if (!holding || holding.quantity < quantity) {
+                toast({
+                    title: "Insufficient holdings",
+                    status: "error",
+                    duration: 2000,
+                });
+                return;
+            }
+            
+            const revenue = quantity * price;
+            setPortfolio(prev => ({
+                balance: prev.balance + revenue,
+                holdings: {
+                    ...prev.holdings,
+                    [coin.id]: {
+                        ...holding,
+                        quantity: holding.quantity - quantity
+                    }
+                }
+            }));
+        }
+        
+        const scoreChange = calculateCarbonScore(trade);
+        setCarbonScore(prev => prev + scoreChange);
+        setTrades(prev => [...prev, trade]);
+        
+        toast({
+            title: `${type === 'buy' ? 'Bought' : 'Sold'} ${quantity.toFixed(2)} ${coin.symbol}`,
+            description: `Carbon score ${scoreChange > 0 ? '+' : ''}${scoreChange}`,
+            status: scoreChange > 0 ? "success" : "warning",
+            duration: 2000,
+        });
+    };
+
+    const profit = calculateProfit(portfolio, Object.fromEntries(
+        Object.entries(prices).map(([id, p]) => [id, p.current])
+    ));
+    
+    const carbonFootprint = calculateCarbonFootprint(trades, portfolio.holdings);
+    
+    const mins = Math.floor(timeLeft / 60);
+    const secs = timeLeft % 60;
 
     return (
         <Protect authed={authed}>
-            {/* NAV */}
-            <Flex px={20} pt={10}>
-                <Box>
-                    <Text fontWeight="medium" fontSize={28}>
-                        Opponent profit
-                    </Text>
-                    <Heading fontSize={44}>$1400</Heading>
-                </Box>
-            </Flex>
+            <Flex h="100vh" overflow="hidden">
+                <Box flex={1} p={6} overflowY="auto">
+                    <VStack spacing={6} align="stretch">
+                        <HStack justify="space-between">
+                            <Stat>
+                                <StatLabel>Your Profit</StatLabel>
+                                <StatNumber color={profit >= 0 ? "green.400" : "red.400"}>
+                                    ${profit.toFixed(2)}
+                                </StatNumber>
+                                <StatHelpText>
+                                    <StatArrow type={profit >= 0 ? "increase" : "decrease"} />
+                                    {((profit / GAME_CONFIG.INITIAL_BALANCE) * 100).toFixed(2)}%
+                                </StatHelpText>
+                            </Stat>
+                            
+                            <Stat textAlign="center">
+                                <StatLabel>
+                                    <HStack justify="center">
+                                        <TimeIcon />
+                                        <Text>Time Remaining</Text>
+                                    </HStack>
+                                </StatLabel>
+                                <StatNumber fontSize="4xl">
+                                    {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
+                                </StatNumber>
+                            </Stat>
+                            
+                            <Stat textAlign="right">
+                                <StatLabel>Carbon Score</StatLabel>
+                                <StatNumber color={carbonScore >= 0 ? "green.400" : "red.400"}>
+                                    <HStack justify="flex-end">
+                                        <StarIcon />
+                                        <Text>{carbonScore}</Text>
+                                    </HStack>
+                                </StatNumber>
+                                <StatHelpText>Footprint: {carbonFootprint}</StatHelpText>
+                            </Stat>
+                        </HStack>
 
-            {/* RIGHT BAR */}
-            <Box
-                sx={{
-                    position: "fixed",
-                    top: 0,
-                    right: 0,
-                    w: "26%",
-                    h: "100vh",
-                    zIndex: 10,
-                }}
-                bg="glass"
-                pt={10}
-                px={10}
-            >
-                <Heading textAlign="center" fontSize={56} fontWeight="medium">
-                    Timer
-                </Heading>
-                <Heading textAlign="center" fontSize={72} mb={10}>
-                    0{mins}:{secs}
-                </Heading>
+                        <CoinSelector
+                            coins={CRYPTO_COINS}
+                            selectedCoin={selectedCoin}
+                            onSelect={setSelectedCoin}
+                            prices={prices}
+                        />
 
-                <Flex
-                    w="100%"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    px={10}
-                    mb={10}
-                >
-                    <Box>
-                        <Text
-                            textAlign="center"
-                            fontWeight="medium"
-                            fontSize={20}
-                        >
-                            Money left
-                        </Text>
-                        <Heading fontSize={38}>$500</Heading>
-                    </Box>
-                    <Box>
-                        <Text
-                            textAlign="center"
-                            fontWeight="medium"
-                            fontSize={20}
-                        >
-                            Money left
-                        </Text>
-                        <Heading fontSize={38}>$500</Heading>
-                    </Box>
-                </Flex>
-
-                <FormLabel>Quantity</FormLabel>
-                <NumberInput defaultValue={0} variant="filled" size="lg" mb={4}>
-                    <NumberInputField border="2px solid white" />
-                    <NumberInputStepper>
-                        <NumberIncrementStepper />
-                        <NumberDecrementStepper />
-                    </NumberInputStepper>
-                </NumberInput>
-
-                <Flex
-                    w="100%"
-                    justifyContent="center"
-                    alignItems="center"
-                    mb={10}
-                >
-                    <Button mx={1} w="100%" colorScheme="green">
-                        Buy
-                    </Button>
-                    <Button mx={1} w="100%" colorScheme="red">
-                        Sell
-                    </Button>
-                </Flex>
-
-                <Divider border="1px" rounded="xl" />
-
-                <Box mt={6} w="100%">
-                    {news.map((n, i) => (
-                        <Box
-                            rounded="xl"
-                            bg="brandBlack.100"
-                            px={5}
-                            py={4}
-                            key={i}
-                            mb={3}
-                            fontWeight="medium"
-                        >
-                            {n}
+                        <Box bg="brandBlack.100" p={6} borderRadius="xl" h="500px">
+                            <Graph 
+                                data={priceHistory[selectedCoin.id]} 
+                                selectedCoin={selectedCoin}
+                            />
                         </Box>
-                    ))}
+                    </VStack>
                 </Box>
-            </Box>
 
-            {/* BOTTOM BAR */}
-            <Flex w="37%" ml="18.5%" sx={{ position: "fixed", bottom: 10 }}>
-                <Flex
-                    w="50%"
-                    px={8}
-                    py={4}
-                    mx={3}
-                    bg="brandBlack.100"
-                    rounded="2xl"
-                    fontSize={44}
-                    justifyContent="space-between"
-                    alignItems="center"
+                <Box
+                    w="400px"
+                    bg="glass"
+                    backdropFilter="blur(10px)"
+                    p={6}
+                    overflowY="auto"
+                    borderLeft="1px solid"
+                    borderColor="whiteAlpha.200"
                 >
-                    <IoCloudyNight />
-                    <IoCloudyNight />
-                    <IoCloudyNight />
-                    <IoCloudyNight />
-                </Flex>
+                    <VStack spacing={6} align="stretch">
+                        <TradingPanel
+                            selectedCoin={selectedCoin}
+                            balance={portfolio.balance}
+                            holdings={portfolio.holdings}
+                            currentPrice={prices[selectedCoin.id]?.current || 0}
+                            onTrade={handleTrade}
+                        />
 
-                <Flex
-                    px={8}
-                    py={4}
-                    mx={3}
-                    bg="rgba(20, 150, 100, 0.3)"
-                    rounded="2xl"
-                    fontSize={44}
-                    justifyContent="space-between"
-                    alignItems="center"
-                >
-                    <IoLeaf />
-                    &nbsp;&nbsp;&nbsp;&nbsp;<Heading>400</Heading>
-                </Flex>
+                        <Divider />
+
+                        <NewsPanel news={news} loading={newsLoading} />
+                    </VStack>
+                </Box>
             </Flex>
-
-            <Graph />
         </Protect>
     );
 };
