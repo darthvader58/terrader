@@ -140,7 +140,7 @@ const SignUp = () => {
     }
 
     return (
-        <Box minH="100vh" bgGradient="linear(to-br, brandBlack.200, #1a1a1a)" py={20}>
+        <Box minH="100vh" py={20}>
             <Head>
                 <title>Sign Up - Terrader</title>
             </Head>
@@ -174,10 +174,12 @@ const SignUp = () => {
                     <Box
                         w="100%"
                         bg="glass"
+                        backdropFilter="blur(20px)"
                         p={8}
                         borderRadius="xl"
                         borderWidth={2}
                         borderColor="whiteAlpha.200"
+                        boxShadow="0 8px 32px rgba(0, 0, 0, 0.3)"
                     >
                         <VStack spacing={6}>
                             <Button

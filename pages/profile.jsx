@@ -39,10 +39,12 @@ const Profile = () => {
                     <VStack spacing={8} align="stretch">
                         <Box 
                             bg="glass" 
+                            backdropFilter="blur(15px)"
                             p={8} 
                             borderRadius="xl" 
                             borderWidth={2}
                             borderColor="whiteAlpha.200"
+                            boxShadow="0 8px 32px rgba(0, 0, 0, 0.3)"
                         >
                             <HStack spacing={8} mb={6}>
                                 <Box
@@ -112,14 +114,16 @@ const Profile = () => {
                                         <Box
                                             key={i}
                                             bg="brandBlack.100"
+                                            backdropFilter="blur(10px)"
                                             p={6}
                                             borderRadius="xl"
                                             borderWidth={2}
                                             borderColor="whiteAlpha.200"
+                                            boxShadow="0 4px 16px rgba(0, 0, 0, 0.2)"
                                             _hover={{
                                                 borderColor: "green.400",
                                                 transform: "translateY(-8px)",
-                                                boxShadow: "0 8px 20px rgba(28, 200, 128, 0.3)",
+                                                boxShadow: "0 12px 32px rgba(28, 200, 128, 0.3)",
                                             }}
                                             transition="all 0.3s"
                                         >
@@ -162,10 +166,10 @@ const Profile = () => {
                             <HStack justify="space-between">
                                 <VStack align="start">
                                     <Text fontWeight="bold" fontSize="lg">
-                                        Need More Credits?
+                                        Earn More Credits
                                     </Text>
                                     <Text fontSize="sm" color="gray.400">
-                                        Earn credits by playing games and achieving high carbon scores
+                                        Play games, achieve high carbon scores, and win matches to earn credits. All currency is in-game only!
                                     </Text>
                                 </VStack>
                                 <Button colorScheme="blue" size="lg">

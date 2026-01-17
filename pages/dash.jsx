@@ -73,13 +73,16 @@ const Dash = () => {
                                     <Box
                                         key={i}
                                         bg="glass"
+                                        backdropFilter="blur(15px)"
                                         p={6}
                                         borderRadius="xl"
                                         borderWidth={2}
                                         borderColor="whiteAlpha.200"
+                                        boxShadow="0 4px 16px rgba(0, 0, 0, 0.2)"
                                         _hover={{
                                             borderColor: "green.400",
                                             transform: "translateY(-4px)",
+                                            boxShadow: "0 8px 24px rgba(28, 200, 128, 0.3)",
                                         }}
                                         transition="all 0.3s"
                                     >
@@ -163,10 +166,12 @@ const Dash = () => {
 
                         <Box
                             bg="glass"
+                            backdropFilter="blur(15px)"
                             p={6}
                             borderRadius="xl"
                             borderWidth={2}
                             borderColor="blue.400"
+                            boxShadow="0 8px 32px rgba(66, 153, 225, 0.2)"
                         >
                             <HStack justify="space-between">
                                 <HStack>

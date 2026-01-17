@@ -105,10 +105,12 @@ const Results = () => {
                         <Box
                             w="100%"
                             bg={userRank.rank <= 3 ? 'green.900' : 'brandBlack.100'}
+                            backdropFilter="blur(15px)"
                             p={8}
                             borderRadius="xl"
                             borderWidth={3}
                             borderColor={getRankColor(userRank.rank)}
+                            boxShadow={`0 8px 32px ${getRankColor(userRank.rank)}40`}
                         >
                             <VStack spacing={6}>
                                 {getRankIcon(userRank.rank)}
@@ -157,8 +159,10 @@ const Results = () => {
                         </Heading>
                         <Box
                             bg="brandBlack.100"
+                            backdropFilter="blur(10px)"
                             borderRadius="xl"
                             overflow="hidden"
+                            boxShadow="0 4px 16px rgba(0, 0, 0, 0.3)"
                         >
                             <Table variant="simple">
                                 <Thead bg="brandBlack.200">

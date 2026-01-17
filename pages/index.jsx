@@ -89,16 +89,6 @@ const Home = () => {
                 <meta name="description" content="A multiplayer crypto trading game that raises awareness about environmental impact" />
             </Head>
             
-            <Box
-                position="absolute"
-                top={0}
-                left={0}
-                right={0}
-                bottom={0}
-                bgGradient="linear(to-br, brandBlack.200, #1a1a1a)"
-                opacity={0.9}
-            />
-            
             <Container maxW="container.xl" position="relative" zIndex={1}>
                 <Flex
                     direction="column"
@@ -126,14 +116,16 @@ const Home = () => {
                                     "-webkit-text-stroke-color": "white",
                                     color: "rgba(0, 0, 0, 0)",
                                 }}
+                                textShadow="0 0 20px rgba(28, 200, 128, 0.5)"
                             >
                                 TERRADER
                             </Heading>
                             
                             <Text
                                 fontSize={{ base: "lg", md: "xl" }}
-                                color="gray.300"
+                                color="white"
                                 maxW="2xl"
+                                textShadow="2px 2px 4px rgba(0, 0, 0, 0.8)"
                             >
                                 A multiplayer crypto trading game that raises awareness about 
                                 environmental impact. Trade smart, reduce your carbon footprint, 
@@ -181,16 +173,19 @@ const Home = () => {
                             </Link>
 
                             <HStack spacing={2} pt={2}>
-                                <Text fontSize="sm" color="gray.400">
+                                <Text fontSize="sm" color="white">
                                     Already have an account?
                                 </Text>
                                 <Link href="/login">
                                     <Text
                                         fontSize="sm"
-                                        color="green.400"
+                                        color="green.300"
                                         fontWeight="bold"
                                         cursor="pointer"
-                                        _hover={{ textDecoration: "underline" }}
+                                        _hover={{ 
+                                            textDecoration: "underline",
+                                            color: "green.200"
+                                        }}
                                     >
                                         Log in
                                     </Text>
@@ -207,14 +202,17 @@ const Home = () => {
                             {features.map((feature, i) => (
                                 <Box
                                     key={i}
-                                    bg="glass"
+                                    bg="rgba(30, 30, 30, 0.85)"
+                                    backdropFilter="blur(20px)"
                                     p={6}
                                     borderRadius="xl"
                                     borderWidth={2}
-                                    borderColor="whiteAlpha.200"
+                                    borderColor="whiteAlpha.300"
+                                    boxShadow="0 8px 32px rgba(0, 0, 0, 0.4)"
                                     _hover={{
                                         borderColor: "green.400",
                                         transform: "translateY(-8px)",
+                                        boxShadow: "0 12px 40px rgba(28, 200, 128, 0.3)",
                                     }}
                                     transition="all 0.3s"
                                 >
@@ -225,10 +223,10 @@ const Home = () => {
                                             color="green.400"
                                         />
                                         <VStack align="start" spacing={2}>
-                                            <Text fontWeight="bold" fontSize="lg">
+                                            <Text fontWeight="bold" fontSize="lg" color="white">
                                                 {feature.title}
                                             </Text>
-                                            <Text fontSize="sm" color="gray.400">
+                                            <Text fontSize="sm" color="gray.300">
                                                 {feature.description}
                                             </Text>
                                         </VStack>
@@ -238,19 +236,21 @@ const Home = () => {
                         </SimpleGrid>
 
                         <Box
-                            bg="glass"
+                            bg="rgba(30, 30, 30, 0.85)"
+                            backdropFilter="blur(20px)"
                             p={8}
                             borderRadius="xl"
                             borderWidth={2}
                             borderColor="blue.400"
+                            boxShadow="0 8px 32px rgba(66, 153, 225, 0.3)"
                             maxW="3xl"
                             w="100%"
                         >
                             <VStack spacing={4}>
-                                <Heading size="md" color="blue.400">
+                                <Heading size="md" color="blue.300">
                                     About the Game
                                 </Heading>
-                                <Text fontSize="sm" color="gray.300" textAlign="center">
+                                <Text fontSize="sm" color="gray.200" textAlign="center">
                                     Terrader features 4 unique cryptocurrencies: TerraCoin, Gaiacoin, 
                                     Envirocoin, and DharaCoin. Start with $500 virtual currency and 
                                     compete in 15-minute matches. Your carbon score determines your 

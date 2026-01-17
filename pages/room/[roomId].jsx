@@ -150,10 +150,12 @@ const GameRoom = () => {
                     <Box
                         w="100%"
                         bg="glass"
+                        backdropFilter="blur(20px)"
                         p={8}
                         borderRadius="xl"
                         borderWidth={2}
                         borderColor="green.400"
+                        boxShadow="0 8px 32px rgba(28, 200, 128, 0.2)"
                     >
                         <VStack spacing={6}>
                             <Heading size="xl">
@@ -267,10 +269,12 @@ const GameRoom = () => {
                                 <Box
                                     key={player.userId}
                                     bg="brandBlack.100"
+                                    backdropFilter="blur(10px)"
                                     p={4}
                                     borderRadius="lg"
                                     borderWidth={2}
                                     borderColor={player.userId === user?.uid ? 'green.400' : 'whiteAlpha.200'}
+                                    boxShadow={player.userId === user?.uid ? '0 4px 16px rgba(28, 200, 128, 0.3)' : 'none'}
                                 >
                                     <HStack spacing={3}>
                                         <Avatar

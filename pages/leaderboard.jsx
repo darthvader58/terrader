@@ -89,10 +89,12 @@ const Leaderboard = () => {
 
                         <Box
                             bg="glass"
+                            backdropFilter="blur(15px)"
                             p={6}
                             borderRadius="xl"
                             borderWidth={2}
                             borderColor="yellow.400"
+                            boxShadow="0 8px 32px rgba(236, 201, 75, 0.2)"
                         >
                             <Text fontSize="lg" textAlign="center" color="gray.300">
                                 Compete with players worldwide! Rankings based on total carbon score.
@@ -114,8 +116,10 @@ const Leaderboard = () => {
                                     ) : (
                                         <Box
                                             bg="brandBlack.100"
+                                            backdropFilter="blur(10px)"
                                             borderRadius="xl"
                                             overflow="hidden"
+                                            boxShadow="0 4px 16px rgba(0, 0, 0, 0.3)"
                                         >
                                             <Table variant="simple">
                                                 <Thead bg="brandBlack.200">

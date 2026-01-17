@@ -250,10 +250,12 @@ const Lobby = () => {
 
                         <Box
                             bg="glass"
+                            backdropFilter="blur(15px)"
                             p={6}
                             borderRadius="xl"
                             borderWidth={2}
                             borderColor="blue.400"
+                            boxShadow="0 8px 32px rgba(66, 153, 225, 0.2)"
                         >
                             <HStack spacing={4}>
                                 <Icon as={FaTrophy} color="yellow.400" boxSize={6} />
@@ -453,13 +455,16 @@ const RoomCard = ({ room, onJoin, getRoomTypeIcon, getRoomTypeColor }) => {
     return (
         <Box
             bg="brandBlack.100"
+            backdropFilter="blur(10px)"
             p={6}
             borderRadius="xl"
             borderWidth={2}
             borderColor="whiteAlpha.200"
+            boxShadow="0 4px 16px rgba(0, 0, 0, 0.2)"
             _hover={{
                 borderColor: getRoomTypeColor(room.roomType),
                 transform: 'translateY(-4px)',
+                boxShadow: `0 8px 24px ${getRoomTypeColor(room.roomType)}40`,
             }}
             transition="all 0.3s"
         >

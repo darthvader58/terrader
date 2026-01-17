@@ -329,7 +329,7 @@ const Play = () => {
                             prices={prices}
                         />
 
-                        <Box bg="brandBlack.100" p={6} borderRadius="xl" h="500px">
+                        <Box bg="brandBlack.100" p={6} borderRadius="xl" h="500px" backdropFilter="blur(10px)" boxShadow="0 4px 16px rgba(0, 0, 0, 0.3)">
                             <Graph 
                                 data={priceHistory[selectedCoin.id]} 
                                 selectedCoin={selectedCoin}
@@ -341,11 +341,12 @@ const Play = () => {
                 <Box
                     w="400px"
                     bg="glass"
-                    backdropFilter="blur(10px)"
+                    backdropFilter="blur(20px)"
                     p={6}
                     overflowY="auto"
                     borderLeft="1px solid"
                     borderColor="whiteAlpha.200"
+                    boxShadow="-4px 0 16px rgba(0, 0, 0, 0.2)"
                 >
                     <VStack spacing={6} align="stretch">
                         <TradingPanel
