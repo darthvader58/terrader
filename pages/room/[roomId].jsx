@@ -16,12 +16,17 @@ import {
     Divider,
     Spinner,
     Center,
+    InputGroup,
+    Input,
+    InputRightElement,
+    IconButton,
+    useClipboard,
 } from '@chakra-ui/react';
-import { FaPlay, FaCrown, FaUser } from 'react-icons/fa';
+import { FaPlay, FaCrown, FaUser, FaCopy, FaCheck } from 'react-icons/fa';
 import { ArrowBackIcon } from '@chakra-ui/icons';
 import Protect from '@/components/Protect';
 import { useAuth } from '@/contexts/AuthContext';
-import { subscribeToRoom, leaveGameRoom, startGame, ROOM_STATUS } from '@/utils/gameRoom';
+import { subscribeToRoom, leaveGameRoom, startGame, ROOM_STATUS, ROOM_TYPES } from '@/utils/gameRoom';
 
 const GameRoom = () => {
     const { user } = useAuth();
@@ -119,6 +124,7 @@ const GameRoom = () => {
 
     const players = Object.values(room.players || {});
     const isHost = room.hostUserId === user?.uid;
+    const { hasCopied, onCopy } = useClipboard(room.inviteCode || '');
 
     return (
         <Protect>
@@ -151,8 +157,46 @@ const GameRoom = () => {
                     >
                         <VStack spacing={6}>
                             <Heading size="xl">
-                                Room #{roomId?.slice(-6)}
+                                {room.roomType === ROOM_TYPES.GLOBAL ? 'Global Room' : `Room #${roomId?.slice(-6)}`}
                             </Heading>
+                            
+                            {/* Only show invite code if it's a private room AND user is in the room */}
+                            {room.inviteCode && room.roomType === ROOM_TYPES.PRIVATE && room.players[user?.uid] && (
+                                <Box w="100%" maxW="md">
+                                    <VStack spacing={2}>
+                                        <Badge colorScheme="orange" fontSize="sm" px={3} py={1}>
+                                            Private Room
+                                        </Badge>
+                                        <Text fontSize="sm" color="gray.400" textAlign="center">
+                                            Share this code with friends to invite them:
+                                        </Text>
+                                        <InputGroup size="lg">
+                                            <Input
+                                                value={room.inviteCode}
+                                                isReadOnly
+                                                textAlign="center"
+                                                fontSize="2xl"
+                                                letterSpacing="wider"
+                                                fontWeight="bold"
+                                                bg="brandBlack.200"
+                                                borderColor="orange.400"
+                                                borderWidth={2}
+                                            />
+                                            <InputRightElement>
+                                                <IconButton
+                                                    icon={hasCopied ? <FaCheck /> : <FaCopy />}
+                                                    onClick={onCopy}
+                                                    colorScheme={hasCopied ? 'green' : 'orange'}
+                                                    aria-label="Copy invite code"
+                                                />
+                                            </InputRightElement>
+                                        </InputGroup>
+                                        <Text fontSize="xs" color="orange.300">
+                                            This code is private and expires in 24 hours
+                                        </Text>
+                                    </VStack>
+                                </Box>
+                            )}
                             
                             <HStack spacing={8}>
                                 <VStack>
@@ -172,9 +216,22 @@ const GameRoom = () => {
                                         {room.hostUsername}
                                     </Text>
                                 </VStack>
+                                {room.roomType === ROOM_TYPES.GLOBAL && room.autoStartTimer && (
+                                    <>
+                                        <Divider orientation="vertical" h="60px" />
+                                        <VStack>
+                                            <Text fontSize="sm" color="gray.400">
+                                                Starting in
+                                            </Text>
+                                            <Text fontSize="2xl" fontWeight="bold" color="yellow.400">
+                                                {Math.max(0, Math.floor((room.autoStartTimer - Date.now()) / 1000))}s
+                                            </Text>
+                                        </VStack>
+                                    </>
+                                )}
                             </HStack>
 
-                            {isHost && room.status === ROOM_STATUS.WAITING && (
+                            {isHost && room.status === ROOM_STATUS.WAITING && room.roomType !== ROOM_TYPES.GLOBAL && (
                                 <Button
                                     leftIcon={<Icon as={FaPlay} />}
                                     colorScheme="green"
@@ -187,9 +244,15 @@ const GameRoom = () => {
                                 </Button>
                             )}
 
-                            {!isHost && room.status === ROOM_STATUS.WAITING && (
+                            {!isHost && room.status === ROOM_STATUS.WAITING && room.roomType !== ROOM_TYPES.GLOBAL && (
                                 <Text color="gray.400" fontSize="lg">
                                     Waiting for host to start the game...
+                                </Text>
+                            )}
+
+                            {room.roomType === ROOM_TYPES.GLOBAL && room.status === ROOM_STATUS.WAITING && (
+                                <Text color="gray.400" fontSize="lg">
+                                    Game will start automatically when {room.autoStartThreshold} players join...
                                 </Text>
                             )}
                         </VStack>

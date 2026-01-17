@@ -12,7 +12,8 @@ import {
     serverTimestamp,
     onSnapshot,
     arrayUnion,
-    increment
+    increment,
+    deleteDoc
 } from 'firebase/firestore';
 import db from '@/db';
 
@@ -24,11 +25,96 @@ export const ROOM_STATUS = {
 
 export const ROOM_TYPES = {
     PUBLIC: 'public',
-    PRIVATE: 'private'
+    PRIVATE: 'private',
+    GLOBAL: 'global'
 };
+
+// Generate a shareable invite code
+export function generateInviteCode() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+// Create or get the current global room
+export async function getOrCreateGlobalRoom() {
+    const globalRoomsQuery = query(
+        collection(db, 'gameRooms'),
+        where('roomType', '==', ROOM_TYPES.GLOBAL),
+        where('status', '==', ROOM_STATUS.WAITING),
+        orderBy('createdAt', 'desc'),
+        limit(1)
+    );
+    
+    const snapshot = await getDocs(globalRoomsQuery);
+    
+    // If a waiting global room exists and isn't full, return it
+    if (!snapshot.empty) {
+        const room = snapshot.docs[0];
+        const roomData = room.data();
+        
+        if (roomData.currentPlayers < roomData.maxPlayers) {
+            return { roomId: room.id, ...roomData };
+        }
+    }
+    
+    // Create a new global room
+    const roomId = `global_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const roomData = {
+        roomId,
+        hostUserId: 'system',
+        hostUsername: 'System',
+        roomType: ROOM_TYPES.GLOBAL,
+        maxPlayers: 100,
+        currentPlayers: 0,
+        status: ROOM_STATUS.WAITING,
+        players: {},
+        leaderboard: {},
+        startTime: null,
+        endTime: null,
+        createdAt: serverTimestamp(),
+        autoStart: true,
+        autoStartThreshold: 10, // Auto-start when 10 players join
+        autoStartTimer: null,
+    };
+    
+    await setDoc(doc(db, 'gameRooms', roomId), roomData);
+    return { roomId, ...roomData };
+}
+
+// Check and auto-start global rooms
+export async function checkAutoStartGlobalRoom(roomId) {
+    const roomRef = doc(db, 'gameRooms', roomId);
+    const roomSnap = await getDoc(roomRef);
+    
+    if (!roomSnap.exists()) return;
+    
+    const roomData = roomSnap.data();
+    
+    if (roomData.roomType === ROOM_TYPES.GLOBAL && 
+        roomData.status === ROOM_STATUS.WAITING &&
+        roomData.currentPlayers >= roomData.autoStartThreshold) {
+        
+        // Set a 30-second countdown before auto-start
+        if (!roomData.autoStartTimer) {
+            const startTime = Date.now() + 30000; // 30 seconds from now
+            await updateDoc(roomRef, {
+                autoStartTimer: startTime
+            });
+            
+            // Schedule the actual start
+            setTimeout(async () => {
+                const updatedSnap = await getDoc(roomRef);
+                if (updatedSnap.exists() && updatedSnap.data().status === ROOM_STATUS.WAITING) {
+                    await startGame(roomId);
+                }
+            }, 30000);
+        }
+    }
+}
 
 export async function createGameRoom(hostUserId, hostUsername, roomType = ROOM_TYPES.PUBLIC, maxPlayers = 50) {
     const roomId = `room_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const inviteCode = roomType === ROOM_TYPES.PRIVATE ? generateInviteCode() : null;
     
     const roomData = {
         roomId,
@@ -38,6 +124,7 @@ export async function createGameRoom(hostUserId, hostUsername, roomType = ROOM_T
         maxPlayers,
         currentPlayers: 1,
         status: ROOM_STATUS.WAITING,
+        inviteCode, // Store in room for host/players to see
         players: {
             [hostUserId]: {
                 userId: hostUserId,
@@ -54,7 +141,18 @@ export async function createGameRoom(hostUserId, hostUsername, roomType = ROOM_T
     };
     
     await setDoc(doc(db, 'gameRooms', roomId), roomData);
-    return roomId;
+    
+    // Store invite code mapping for private rooms (separate collection for security)
+    if (inviteCode) {
+        await setDoc(doc(db, 'inviteCodes', inviteCode), {
+            roomId,
+            hostUserId, // Track who created it
+            createdAt: serverTimestamp(),
+            expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+        });
+    }
+    
+    return { roomId, inviteCode };
 }
 
 export async function joinGameRoom(roomId, userId, username) {
@@ -75,6 +173,11 @@ export async function joinGameRoom(roomId, userId, username) {
         throw new Error('Room is full');
     }
     
+    // Check if player is already in the room
+    if (roomData.players[userId]) {
+        return roomData;
+    }
+    
     await updateDoc(roomRef, {
         [`players.${userId}`]: {
             userId,
@@ -86,7 +189,30 @@ export async function joinGameRoom(roomId, userId, username) {
         currentPlayers: increment(1)
     });
     
+    // Check for auto-start in global rooms
+    if (roomData.roomType === ROOM_TYPES.GLOBAL) {
+        await checkAutoStartGlobalRoom(roomId);
+    }
+    
     return roomData;
+}
+
+export async function joinRoomByInviteCode(inviteCode, userId, username) {
+    const inviteRef = doc(db, 'inviteCodes', inviteCode);
+    const inviteSnap = await getDoc(inviteRef);
+    
+    if (!inviteSnap.exists()) {
+        throw new Error('Invalid invite code');
+    }
+    
+    const inviteData = inviteSnap.data();
+    
+    if (inviteData.expiresAt < Date.now()) {
+        await deleteDoc(inviteRef);
+        throw new Error('Invite code expired');
+    }
+    
+    return await joinGameRoom(inviteData.roomId, userId, username);
 }
 
 export async function leaveGameRoom(roomId, userId) {
@@ -101,23 +227,25 @@ export async function leaveGameRoom(roomId, userId) {
     
     const newPlayerCount = Object.keys(players).length;
     
-    if (newPlayerCount === 0) {
-        // Delete room if empty
+    // Don't delete global rooms, just remove the player
+    if (newPlayerCount === 0 && roomData.roomType !== ROOM_TYPES.GLOBAL) {
         await updateDoc(roomRef, {
             status: ROOM_STATUS.FINISHED
         });
     } else {
-        // If host left, assign new host
         let updates = {
             players,
             currentPlayers: newPlayerCount
         };
         
-        if (roomData.players[userId]?.isHost) {
+        // If host left and it's not a global room, assign new host
+        if (roomData.players[userId]?.isHost && roomData.roomType !== ROOM_TYPES.GLOBAL) {
             const newHostId = Object.keys(players)[0];
-            players[newHostId].isHost = true;
-            updates.hostUserId = newHostId;
-            updates.hostUsername = players[newHostId].username;
+            if (newHostId) {
+                players[newHostId].isHost = true;
+                updates.hostUserId = newHostId;
+                updates.hostUsername = players[newHostId].username;
+            }
         }
         
         await updateDoc(roomRef, updates);
@@ -132,6 +260,12 @@ export async function startGame(roomId) {
         startTime: Date.now(),
         endTime: Date.now() + (15 * 60 * 1000) // 15 minutes
     });
+    
+    // If this was a global room, create a new one
+    const roomSnap = await getDoc(roomRef);
+    if (roomSnap.exists() && roomSnap.data().roomType === ROOM_TYPES.GLOBAL) {
+        await getOrCreateGlobalRoom();
+    }
 }
 
 export async function updatePlayerScore(roomId, userId, carbonScore, profit, portfolio) {
@@ -173,6 +307,7 @@ export async function finishGame(roomId) {
         if (userSnap.exists()) {
             const userData = userSnap.data();
             const isWin = player.rank <= 3;
+            const creditsEarned = isWin ? 50 : 10;
             
             await updateDoc(userRef, {
                 totalGames: increment(1),
@@ -181,31 +316,48 @@ export async function finishGame(roomId) {
                 highestRank: !userData.highestRank || player.rank < parseInt(userData.highestRank.split('/')[0]) 
                     ? `${player.rank}/${rankings.length}` 
                     : userData.highestRank,
-                carbonCredits: increment(isWin ? 50 : 10),
-                level: Math.floor((userData.totalGames + 1) / 5) + 1
+                carbonCredits: increment(creditsEarned),
+                level: Math.floor(((userData.totalGames || 0) + 1) / 5) + 1
+            });
+            
+            // Save to game history
+            await saveGameHistory(player.userId, {
+                roomId,
+                rank: player.rank,
+                totalPlayers: rankings.length,
+                carbonScore: player.carbonScore,
+                profit: player.profit,
+                creditsEarned,
+                roomType: roomData.roomType
             });
         }
     }
     
     await updateDoc(roomRef, {
         status: ROOM_STATUS.FINISHED,
-        finalRankings: rankings
+        finalRankings: rankings,
+        finishedAt: serverTimestamp()
     });
     
     return rankings;
 }
 
 export async function getAvailableRooms() {
+    // Only show public and global rooms - private rooms are invite-only
     const roomsQuery = query(
         collection(db, 'gameRooms'),
         where('status', '==', ROOM_STATUS.WAITING),
-        where('roomType', '==', ROOM_TYPES.PUBLIC),
+        where('roomType', 'in', [ROOM_TYPES.PUBLIC, ROOM_TYPES.GLOBAL]),
         orderBy('createdAt', 'desc'),
         limit(20)
     );
     
     const snapshot = await getDocs(roomsQuery);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    // Filter out any rooms with invite codes (extra security layer)
+    return snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(room => !room.inviteCode); // Ensure no private rooms leak through
 }
 
 export function subscribeToRoom(roomId, callback) {
@@ -242,7 +394,37 @@ export async function saveGameHistory(userId, gameData) {
         totalPlayers: gameData.totalPlayers,
         carbonScore: gameData.carbonScore,
         profit: gameData.profit,
-        trades: gameData.trades,
+        creditsEarned: gameData.creditsEarned,
+        roomType: gameData.roomType,
         playedAt: serverTimestamp()
     });
+}
+
+export async function getUserGameHistory(userId, limitCount = 10) {
+    const historyQuery = query(
+        collection(db, 'gameHistory'),
+        where('userId', '==', userId),
+        orderBy('playedAt', 'desc'),
+        limit(limitCount)
+    );
+    
+    const snapshot = await getDocs(historyQuery);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+// Clean up old finished rooms (call this periodically)
+export async function cleanupOldRooms() {
+    const cutoffTime = Date.now() - (24 * 60 * 60 * 1000); // 24 hours ago
+    
+    const oldRoomsQuery = query(
+        collection(db, 'gameRooms'),
+        where('status', '==', ROOM_STATUS.FINISHED),
+        where('finishedAt', '<', cutoffTime)
+    );
+    
+    const snapshot = await getDocs(oldRoomsQuery);
+    
+    for (const doc of snapshot.docs) {
+        await deleteDoc(doc.ref);
+    }
 }
