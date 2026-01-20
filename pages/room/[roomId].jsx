@@ -36,6 +36,9 @@ const GameRoom = () => {
     
     const [room, setRoom] = useState(null);
     const [loading, setLoading] = useState(true);
+    
+    // Move useClipboard to top - hooks must be called unconditionally
+    const { hasCopied, onCopy } = useClipboard(room?.inviteCode || '');
 
     useEffect(() => {
         if (!roomId || !user) return;
@@ -124,7 +127,6 @@ const GameRoom = () => {
 
     const players = Object.values(room.players || {});
     const isHost = room.hostUserId === user?.uid;
-    const { hasCopied, onCopy } = useClipboard(room.inviteCode || '');
 
     return (
         <Protect>
