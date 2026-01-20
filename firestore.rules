@@ -1,86 +1,13 @@
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    
-    // Helper function to check if user is authenticated
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    // Helper function to check if user owns the document
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
-    // Helper function to check if user is in a room
-    function isInRoom(roomData) {
-      return roomData.players[request.auth.uid] != null;
-    }
-    
-    // Users collection
-    match /users/{userId} {
-      // Anyone authenticated can read user profiles (for leaderboards)
-      allow read: if isAuthenticated();
-      
-      // Users can only write to their own profile
-      allow create: if isAuthenticated() && isOwner(userId);
-      allow update: if isAuthenticated() && isOwner(userId);
-      allow delete: if false; // Prevent deletion
-    }
-    
-    // Game rooms collection
-    match /gameRooms/{roomId} {
-      // Users can read rooms they are in, or public/global rooms
-      allow read: if isAuthenticated() && (
-        // User is in the room
-        resource.data.players[request.auth.uid] != null ||
-        // Room is public or global (not private)
-        resource.data.roomType in ['public', 'global']
-      );
-      
-      // Anyone authenticated can create a room
-      allow create: if isAuthenticated();
-      
-      // Only players in the room or host can update it
-      allow update: if isAuthenticated() && (
-        resource.data.players[request.auth.uid] != null ||
-        request.auth.uid == resource.data.hostUserId ||
-        resource.data.roomType == 'global'
-      );
-      
-      // Only host can delete (finish) the room
-      allow delete: if isAuthenticated() && 
-        request.auth.uid == resource.data.hostUserId;
-    }
-    
-    // Invite codes collection - HIGHLY RESTRICTED
-    match /inviteCodes/{code} {
-      // Only allow reading a specific invite code when user provides it
-      // This prevents listing all invite codes
-      allow read: if isAuthenticated();
-      
-      // Only authenticated users can create invite codes
-      allow create: if isAuthenticated();
-      
-      // No updates allowed
-      allow update: if false;
-      
-      // Only the room host can delete their invite codes
-      allow delete: if isAuthenticated() && 
-        resource.data.hostUserId == request.auth.uid;
-    }
-    
-    // Game history collection
-    match /gameHistory/{historyId} {
-      // Users can only read their own history
-      allow read: if isAuthenticated() && 
-        resource.data.userId == request.auth.uid;
-      
-      // System creates history records
-      allow create: if isAuthenticated();
-      
-      // No updates or deletes
-      allow update, delete: if false;
-    }
-  }
-}
+We always have the value 1 over 1, and at A, we have alpha here. We want to change this value to alpha - 1, so this is actually very simple. You want to compute this and store this value at A. If you remember SUBLEC AB means that you subtract the value at A from the value at B and store back to address B. So, we can just do OA, okay? We will take the value M of A (this is an assignment, not equality) M of A - M of O (which is 1) will be stored here after running this. Similarly, we want to do INK. INK A, we increment this value by 1. This will take more instructions because the same reasoning. You want to first compute -1 and subtract that from alpha, right? Alpha - (-1) okay? To do this, you actually need to use both of the special addresses Z and O. O has 1, Z has 0, A has alpha.
+
+First, you need to compute -1, and you can do that using these two locations. Do so by putting 0 here and 1 here, and you will get -1 stored here. Side note: You don't want to use this space as a temporary location because it's actually impossible to recover the value 1 if you override it. But feel free to leverage this location because even if you override this location, you can always easily recover the zero value as Peter and I discussed.
+
+Okay, so -1 is stored at location Z, so we want to do alpha - (-1). We can do that by some like we have alpha here and Z here, right? The result will be stored at A (not alpha). This should be always the A. B, and C or Z, O. These are all addresses (ADDR for short-term notation). These are addresses and alpha, beta, zero, one, or values. After that, you will have alpha + 1 here, and we need to revert this back to zero and do that by sub lag ZZ. Okay, so this is how you implement INC A using sub lag.
+
+Any questions so far? Hopefully, it should have been relatively straightforward. But starting from now, things will be a little bit complicated.
+
+Here we want to implement BGE instruction (Branch if Greater than or Equal to 0). This is an instruction that we want to implement, so BGEAC. Let's look at this instruction. What we are going to do is we will check the value at address A (which is alpha). If alpha is greater than or equal to zero, then we jump to C. Otherwise, we will just execute the subsequent instruction.
+
+Okay, so how can we test whether alpha is greater than or equal to zero with the instructions which can do branch based on the value (based on whether the value is less than or equal to zero)? How can you test this using some like?
+
+Okay, what's your name? Sorry, exactly you mean checking whether -alpha is less than or equal to zero, right? By the way, I want to find your name on roster. Does your name start with H or A? A. Oh, Arsha! Okay, I found you. Okay, thanks. Yeah, perfect, Arsha. So it's same. Yep! 
