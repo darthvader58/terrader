@@ -92,27 +92,36 @@ export function calculateProfit(portfolio, currentPrices) {
     return totalValue - GAME_CONFIG.INITIAL_BALANCE;
 }
 
-export function generatePriceMovement(currentPrice, newsImpact = 0) {
-    const baseVolatility = 0.05;
+export function generatePriceMovement(currentPrice, newsImpact = 0, marketTrend = 0) {
+    const baseVolatility = 0.03; // Reduced for more realistic movement
     const randomChange = (Math.random() - 0.5) * 2 * baseVolatility;
-    const newsInfluence = newsImpact * 0.03;
     
-    const totalChange = randomChange + newsInfluence;
+    // News has significant impact (up to 5% change)
+    const newsInfluence = newsImpact * 0.05;
+    
+    // Market trend provides gradual direction
+    const trendInfluence = marketTrend * 0.02;
+    
+    const totalChange = randomChange + newsInfluence + trendInfluence;
     const newPrice = currentPrice * (1 + totalChange);
     
-    return Math.max(0.1, Number(newPrice.toFixed(2)));
+    // Ensure price stays within reasonable bounds
+    return Math.max(10, Math.min(200, Number(newPrice.toFixed(2))));
 }
 
 export function calculateCarbonFootprint(trades, holdings) {
     let footprint = 0;
     
+    // Each trade adds to footprint
     trades.forEach(trade => {
         footprint += Math.abs(trade.quantity * trade.price * 0.001);
     });
     
+    // Holding coins reduces footprint over time (sustainable holding)
     Object.values(holdings).forEach(holding => {
-        footprint += holding.quantity * 0.0005;
+        footprint -= holding.quantity * 0.0002; // Negative = good
     });
     
-    return Math.floor(footprint);
+    // Return absolute value, lower is better
+    return Math.max(0, Math.floor(footprint));
 }

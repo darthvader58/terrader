@@ -16,7 +16,7 @@ import {
     Divider,
     Icon,
 } from "@chakra-ui/react";
-import { TimeIcon, StarIcon } from "@chakra-ui/icons";
+import { TimeIcon, StarIcon, ViewIcon, InfoIcon } from "@chakra-ui/icons";
 import { FaTrophy } from "react-icons/fa";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/router";
@@ -28,7 +28,7 @@ import NewsPanel from "@/components/NewsPanel";
 import CarbonMeter from "@/components/CarbonMeter";
 import PlayerActivityFeed from "@/components/PlayerActivityFeed";
 import PowerUpsPanel from "@/components/PowerUpsPanel";
-import { CRYPTO_COINS, GAME_CONFIG, calculateCarbonScore, calculateProfit, generatePriceMovement, calculateCarbonFootprint } from "@/utils/gameLogic";
+import { CRYPTO_COINS, GAME_CONFIG, POWER_UPS, calculateCarbonScore, calculateProfit, generatePriceMovement, calculateCarbonFootprint } from "@/utils/gameLogic";
 import { useAuth } from "@/contexts/AuthContext";
 import { subscribeToRoom, updatePlayerScore, finishGame } from "@/utils/gameRoom";
 
@@ -55,10 +55,13 @@ const Play = () => {
     const [liveLeaderboard, setLiveLeaderboard] = useState([]);
     const [activePowerUps, setActivePowerUps] = useState({});
     const [carbonMultiplier, setCarbonMultiplier] = useState(1);
+    const [marketTrends, setMarketTrends] = useState({});
+    const [lastNewsImpact, setLastNewsImpact] = useState({});
 
     useEffect(() => {
         const initialPrices = {};
         const initialHistory = {};
+        const initialTrends = {};
         
         CRYPTO_COINS.forEach(coin => {
             const basePrice = 50 + Math.random() * 50;
@@ -71,10 +74,12 @@ const Play = () => {
                 labels: ['0m'],
                 prices: [basePrice]
             };
+            initialTrends[coin.id] = (Math.random() - 0.5) * 0.5; // Initial trend
         });
         
         setPrices(initialPrices);
         setPriceHistory(initialHistory);
+        setMarketTrends(initialTrends);
     }, []);
 
     useEffect(() => {
@@ -145,8 +150,15 @@ const Play = () => {
             setPrices(prevPrices => {
                 const newPrices = {};
                 CRYPTO_COINS.forEach(coin => {
-                    const newsImpact = Math.random() - 0.5;
-                    const newPrice = generatePriceMovement(prevPrices[coin.id]?.current || 50, newsImpact);
+                    // Get news impact for this coin
+                    const newsImpact = lastNewsImpact[coin.id] || 0;
+                    const trend = marketTrends[coin.id] || 0;
+                    
+                    const newPrice = generatePriceMovement(
+                        prevPrices[coin.id]?.current || 50, 
+                        newsImpact,
+                        trend
+                    );
                     const change = ((newPrice - prevPrices[coin.id]?.current) / prevPrices[coin.id]?.current) * 100;
                     
                     newPrices[coin.id] = {
@@ -170,7 +182,8 @@ const Play = () => {
                     newHistory[coin.id].labels.push(timeLabel);
                     newHistory[coin.id].prices.push(prices[coin.id]?.current || 50);
                     
-                    if (newHistory[coin.id].labels.length > 30) {
+                    // Keep last 50 data points for better graph
+                    if (newHistory[coin.id].labels.length > 50) {
                         newHistory[coin.id].labels.shift();
                         newHistory[coin.id].prices.shift();
                     }
@@ -178,10 +191,19 @@ const Play = () => {
                 
                 return newHistory;
             });
+            
+            // Gradually decay news impact
+            setLastNewsImpact(prev => {
+                const decayed = {};
+                Object.keys(prev).forEach(coinId => {
+                    decayed[coinId] = prev[coinId] * 0.8; // Decay by 20%
+                });
+                return decayed;
+            });
         }, GAME_CONFIG.PRICE_UPDATE_INTERVAL * 1000);
 
         return () => clearInterval(priceInterval);
-    }, [timeLeft, prices]);
+    }, [timeLeft, prices, lastNewsImpact, marketTrends]);
 
     const fetchNews = useCallback(async () => {
         setNewsLoading(true);
@@ -201,8 +223,22 @@ const Play = () => {
                 setNews(prev => [{
                     news: data.news,
                     coin: data.coin,
+                    trend: trend,
                     timestamp: data.timestamp
-                }, ...prev].slice(0, 4));
+                }, ...prev].slice(0, 5));
+                
+                // Apply news impact to the specific coin
+                const impact = trend === 'bullish' ? 0.6 : -0.6; // Strong impact
+                setLastNewsImpact(prev => ({
+                    ...prev,
+                    [coin.id]: impact
+                }));
+                
+                // Update market trend
+                setMarketTrends(prev => ({
+                    ...prev,
+                    [coin.id]: impact * 0.5 // Trend persists longer
+                }));
             }
         } catch (error) {
             console.error('Failed to fetch news:', error);
@@ -213,8 +249,8 @@ const Play = () => {
 
     useEffect(() => {
         fetchNews();
-        // Increase news frequency to every 15-20 seconds for more dynamic market
-        const newsInterval = setInterval(fetchNews, 15000 + Math.random() * 5000);
+        // News every 30-40 seconds
+        const newsInterval = setInterval(fetchNews, 30000 + Math.random() * 10000);
         return () => clearInterval(newsInterval);
     }, [fetchNews]);
 
@@ -342,7 +378,27 @@ const Play = () => {
                             </Stat>
                             
                             <Stat textAlign="right">
-                                <StatLabel>Carbon Score</StatLabel>
+                                <StatLabel>
+                                    <HStack justify="flex-end" spacing={2}>
+                                        <Text>Carbon Score</Text>
+                                        {/* Power-ups as icons */}
+                                        {Object.keys(activePowerUps).map(powerUpId => {
+                                            const powerUp = POWER_UPS.find(p => p.id === powerUpId);
+                                            if (!powerUp) return null;
+                                            const IconComponent = powerUp.icon === 'time' ? TimeIcon : 
+                                                                 powerUp.icon === 'view' ? ViewIcon :
+                                                                 powerUp.icon === 'star' ? StarIcon : InfoIcon;
+                                            return (
+                                                <Icon 
+                                                    key={powerUpId}
+                                                    as={IconComponent} 
+                                                    color={powerUp.color || 'green.400'}
+                                                    boxSize={4}
+                                                />
+                                            );
+                                        })}
+                                    </HStack>
+                                </StatLabel>
                                 <StatNumber color={carbonScore >= 0 ? "green.400" : "red.400"}>
                                     <HStack justify="flex-end">
                                         <StarIcon />
@@ -393,13 +449,6 @@ const Play = () => {
                         <CarbonMeter 
                             carbonScore={carbonScore}
                             carbonFootprint={carbonFootprint}
-                        />
-
-                        <Divider />
-
-                        <PowerUpsPanel 
-                            ownedPowerUps={user?.powerUps || []}
-                            onUsePowerUp={handleUsePowerUp}
                         />
 
                         <Divider />
@@ -469,6 +518,19 @@ const Play = () => {
                     </VStack>
                 </Box>
             </Flex>
+            
+            {/* Floating Power-Ups Panel */}
+            <Box
+                position="fixed"
+                bottom={6}
+                right={6}
+                zIndex={10}
+            >
+                <PowerUpsPanel 
+                    ownedPowerUps={user?.powerUps || []}
+                    onUsePowerUp={handleUsePowerUp}
+                />
+            </Box>
         </Protect>
     );
 };
