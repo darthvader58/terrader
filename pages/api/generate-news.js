@@ -1,12 +1,20 @@
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
-
 const CRYPTO_COINS = ['TerraCoin', 'Gaiacoin', 'Envirocoin', 'DharaCoin'];
 
 export default async function handler(req, res) {
+    // Set CORS headers for Vercel
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+    
+    // Handle preflight OPTIONS request
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
+    
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -15,6 +23,17 @@ export default async function handler(req, res) {
         const { coinName, currentPrice, trend } = req.body;
         
         const coin = coinName || CRYPTO_COINS[Math.floor(Math.random() * CRYPTO_COINS.length)];
+        
+        if (!process.env.OPENAI_API_KEY) {
+            return res.status(500).json({
+                success: false,
+                error: 'OpenAI API key not configured'
+            });
+        }
+
+        const openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY,
+        });
         
         const prompt = `Generate a brief, realistic crypto news headline (max 15 words) about ${coin} that subtly hints at ${trend || 'neutral'} price movement. The news should relate to environmental impact, sustainability, or carbon footprint. Make it sound like a real financial news headline.`;
 

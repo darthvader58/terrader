@@ -1,7 +1,6 @@
 import {
     Box,
     Flex,
-    Heading,
     Text,
     VStack,
     HStack,
@@ -10,11 +9,15 @@ import {
     StatNumber,
     StatHelpText,
     StatArrow,
-    Progress,
     Badge,
     useToast,
     Divider,
     Icon,
+    Tabs,
+    TabList,
+    TabPanels,
+    Tab,
+    TabPanel,
 } from "@chakra-ui/react";
 import { TimeIcon, StarIcon, ViewIcon, InfoIcon } from "@chakra-ui/icons";
 import { FaTrophy } from "react-icons/fa";
@@ -28,7 +31,10 @@ import NewsPanel from "@/components/NewsPanel";
 import CarbonMeter from "@/components/CarbonMeter";
 import PlayerActivityFeed from "@/components/PlayerActivityFeed";
 import PowerUpsPanel from "@/components/PowerUpsPanel";
-import { CRYPTO_COINS, GAME_CONFIG, POWER_UPS, calculateCarbonScore, calculateProfit, generatePriceMovement, calculateCarbonFootprint } from "@/utils/gameLogic";
+import OrderBook from "@/components/OrderBook";
+import MarketDepth from "@/components/MarketDepth";
+import RecentTrades from "@/components/RecentTrades";
+import { CRYPTO_COINS, GAME_CONFIG, POWER_UPS, calculateCarbonScore, calculateProfit, generatePriceMovement, calculateCarbonFootprint, generateBotTrade, calculateOrderBook } from "@/utils/gameLogic";
 import { useAuth } from "@/contexts/AuthContext";
 import { subscribeToRoom, updatePlayerScore, finishGame } from "@/utils/gameRoom";
 
@@ -57,11 +63,18 @@ const Play = () => {
     const [carbonMultiplier, setCarbonMultiplier] = useState(1);
     const [marketTrends, setMarketTrends] = useState({});
     const [lastNewsImpact, setLastNewsImpact] = useState({});
+    const [recentTrades, setRecentTrades] = useState({});
+    const [orderBooks, setOrderBooks] = useState({});
+    const [marketStats, setMarketStats] = useState({});
+    const [tradingVolumes, setTradingVolumes] = useState({});
 
     useEffect(() => {
         const initialPrices = {};
         const initialHistory = {};
         const initialTrends = {};
+        const initialTrades = {};
+        const initialVolumes = {};
+        const initialStats = {};
         
         CRYPTO_COINS.forEach(coin => {
             const basePrice = 50 + Math.random() * 50;
@@ -75,11 +88,22 @@ const Play = () => {
                 prices: [basePrice]
             };
             initialTrends[coin.id] = (Math.random() - 0.5) * 0.5; // Initial trend
+            initialTrades[coin.id] = [];
+            initialVolumes[coin.id] = 0;
+            initialStats[coin.id] = {
+                volume24h: 0,
+                trades24h: 0,
+                buyPressure: 50,
+                volatility: 0
+            };
         });
         
         setPrices(initialPrices);
         setPriceHistory(initialHistory);
         setMarketTrends(initialTrends);
+        setRecentTrades(initialTrades);
+        setTradingVolumes(initialVolumes);
+        setMarketStats(initialStats);
     }, []);
 
     useEffect(() => {
@@ -153,11 +177,13 @@ const Play = () => {
                     // Get news impact for this coin
                     const newsImpact = lastNewsImpact[coin.id] || 0;
                     const trend = marketTrends[coin.id] || 0;
+                    const volume = tradingVolumes[coin.id] || 0;
                     
                     const newPrice = generatePriceMovement(
                         prevPrices[coin.id]?.current || 50, 
                         newsImpact,
-                        trend
+                        trend,
+                        volume
                     );
                     const change = ((newPrice - prevPrices[coin.id]?.current) / prevPrices[coin.id]?.current) * 100;
                     
@@ -200,10 +226,13 @@ const Play = () => {
                 });
                 return decayed;
             });
+            
+            // Reset trading volumes after each price update
+            setTradingVolumes({});
         }, GAME_CONFIG.PRICE_UPDATE_INTERVAL * 1000);
 
         return () => clearInterval(priceInterval);
-    }, [timeLeft, prices, lastNewsImpact, marketTrends]);
+    }, [timeLeft, prices, lastNewsImpact, marketTrends, tradingVolumes]);
 
     const fetchNews = useCallback(async () => {
         setNewsLoading(true);
@@ -213,9 +242,18 @@ const Play = () => {
             
             const response = await fetch('/api/generate-news', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
                 body: JSON.stringify({ coinName: coin.name, trend })
             });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('API Error:', response.status, errorText);
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             
             const data = await response.json();
             
@@ -239,13 +277,21 @@ const Play = () => {
                     ...prev,
                     [coin.id]: impact * 0.5 // Trend persists longer
                 }));
+            } else {
+                console.error('News generation failed:', data.error);
             }
         } catch (error) {
             console.error('Failed to fetch news:', error);
+            toast({
+                title: "News service unavailable",
+                description: "Unable to fetch market news",
+                status: "warning",
+                duration: 3000,
+            });
         } finally {
             setNewsLoading(false);
         }
-    }, []);
+    }, [toast]);
 
     useEffect(() => {
         fetchNews();
@@ -253,6 +299,89 @@ const Play = () => {
         const newsInterval = setInterval(fetchNews, 30000 + Math.random() * 10000);
         return () => clearInterval(newsInterval);
     }, [fetchNews]);
+    
+    // Bot trading activity
+    useEffect(() => {
+        if (!roomData || !roomData.players) return;
+        
+        const botPlayers = Object.values(roomData.players).filter(p => p.isBot);
+        if (botPlayers.length === 0) return;
+        
+        const botTradingInterval = setInterval(() => {
+            // Random bot makes a trade
+            const randomCoin = CRYPTO_COINS[Math.floor(Math.random() * CRYPTO_COINS.length)];
+            const currentPrice = prices[randomCoin.id]?.current || 50;
+            const trend = marketTrends[randomCoin.id] || 0;
+            
+            const botTrade = generateBotTrade(randomCoin.id, currentPrice, trend);
+            
+            // Add to recent trades
+            setRecentTrades(prev => ({
+                ...prev,
+                [randomCoin.id]: [botTrade, ...(prev[randomCoin.id] || [])].slice(0, 20)
+            }));
+            
+            // Update trading volume
+            setTradingVolumes(prev => ({
+                ...prev,
+                [randomCoin.id]: (prev[randomCoin.id] || 0) + (botTrade.quantity * botTrade.price)
+            }));
+            
+            // Update market stats
+            setMarketStats(prev => {
+                const coinStats = prev[randomCoin.id] || { volume24h: 0, trades24h: 0, buyPressure: 50, volatility: 0 };
+                return {
+                    ...prev,
+                    [randomCoin.id]: {
+                        ...coinStats,
+                        volume24h: coinStats.volume24h + (botTrade.quantity * botTrade.price),
+                        trades24h: coinStats.trades24h + 1,
+                        buyPressure: botTrade.type === 'buy' ? 
+                            Math.min(100, coinStats.buyPressure + 2) : 
+                            Math.max(0, coinStats.buyPressure - 2)
+                    }
+                };
+            });
+        }, 3000 + Math.random() * 4000); // Bot trades every 3-7 seconds
+        
+        return () => clearInterval(botTradingInterval);
+    }, [roomData, prices, marketTrends]);
+    
+    // Update order books and calculate volatility
+    useEffect(() => {
+        const orderBookInterval = setInterval(() => {
+            const newOrderBooks = {};
+            CRYPTO_COINS.forEach(coin => {
+                const currentPrice = prices[coin.id]?.current || 50;
+                const coinTrades = recentTrades[coin.id] || [];
+                newOrderBooks[coin.id] = calculateOrderBook(coinTrades, currentPrice);
+            });
+            setOrderBooks(newOrderBooks);
+            
+            // Calculate volatility from price history
+            setMarketStats(prev => {
+                const updated = { ...prev };
+                CRYPTO_COINS.forEach(coin => {
+                    const history = priceHistory[coin.id]?.prices || [];
+                    if (history.length > 1) {
+                        const recentPrices = history.slice(-10); // Last 10 data points
+                        const changes = recentPrices.slice(1).map((price, i) => 
+                            Math.abs((price - recentPrices[i]) / recentPrices[i] * 100)
+                        );
+                        const avgVolatility = changes.reduce((a, b) => a + b, 0) / changes.length;
+                        
+                        updated[coin.id] = {
+                            ...(updated[coin.id] || { volume24h: 0, trades24h: 0, buyPressure: 50 }),
+                            volatility: avgVolatility || 0
+                        };
+                    }
+                });
+                return updated;
+            });
+        }, 2000); // Update every 2 seconds
+        
+        return () => clearInterval(orderBookInterval);
+    }, [prices, recentTrades, priceHistory]);
 
     const handleUsePowerUp = (powerUp) => {
         setActivePowerUps(prev => ({ ...prev, [powerUp.id]: true }));
@@ -280,7 +409,7 @@ const Play = () => {
     };
 
     const handleTrade = async (type, coin, quantity, price) => {
-        const trade = { type, coin: coin.id, quantity, price, timestamp: Date.now() };
+        const trade = { type, coin: coin.id, quantity, price, timestamp: Date.now(), isBot: false };
         
         if (type === 'buy') {
             const cost = quantity * price;
@@ -330,6 +459,34 @@ const Play = () => {
         const scoreChange = calculateCarbonScore(trade) * carbonMultiplier;
         setCarbonScore(prev => prev + scoreChange);
         setTrades(prev => [...prev, trade]);
+        
+        // Add to recent trades
+        setRecentTrades(prev => ({
+            ...prev,
+            [coin.id]: [trade, ...(prev[coin.id] || [])].slice(0, 20)
+        }));
+        
+        // Update trading volume
+        setTradingVolumes(prev => ({
+            ...prev,
+            [coin.id]: (prev[coin.id] || 0) + (quantity * price)
+        }));
+        
+        // Update market stats
+        setMarketStats(prev => {
+            const coinStats = prev[coin.id] || { volume24h: 0, trades24h: 0, buyPressure: 50, volatility: 0 };
+            return {
+                ...prev,
+                [coin.id]: {
+                    ...coinStats,
+                    volume24h: coinStats.volume24h + (quantity * price),
+                    trades24h: coinStats.trades24h + 1,
+                    buyPressure: type === 'buy' ? 
+                        Math.min(100, coinStats.buyPressure + 3) : 
+                        Math.max(0, coinStats.buyPressure - 3)
+                }
+            };
+        });
         
         toast({
             title: `${type === 'buy' ? 'Bought' : 'Sold'} ${quantity.toFixed(2)} ${coin.symbol}`,
@@ -443,6 +600,36 @@ const Play = () => {
                             currentPrice={prices[selectedCoin.id]?.current || 0}
                             onTrade={handleTrade}
                         />
+
+                        <Divider />
+
+                        <Tabs variant="soft-rounded" colorScheme="green" size="sm">
+                            <TabList>
+                                <Tab fontSize="xs">Order Book</Tab>
+                                <Tab fontSize="xs">Trades</Tab>
+                                <Tab fontSize="xs">Depth</Tab>
+                            </TabList>
+                            <TabPanels>
+                                <TabPanel px={0}>
+                                    <OrderBook 
+                                        buyOrders={orderBooks[selectedCoin.id]?.buyOrders || []}
+                                        sellOrders={orderBooks[selectedCoin.id]?.sellOrders || []}
+                                        currentPrice={prices[selectedCoin.id]?.current}
+                                    />
+                                </TabPanel>
+                                <TabPanel px={0}>
+                                    <RecentTrades trades={recentTrades[selectedCoin.id] || []} />
+                                </TabPanel>
+                                <TabPanel px={0}>
+                                    <MarketDepth 
+                                        volume24h={marketStats[selectedCoin.id]?.volume24h || 0}
+                                        trades24h={marketStats[selectedCoin.id]?.trades24h || 0}
+                                        buyPressure={marketStats[selectedCoin.id]?.buyPressure || 50}
+                                        volatility={marketStats[selectedCoin.id]?.volatility || 0}
+                                    />
+                                </TabPanel>
+                            </TabPanels>
+                        </Tabs>
 
                         <Divider />
 

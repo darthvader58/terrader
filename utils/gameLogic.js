@@ -92,7 +92,7 @@ export function calculateProfit(portfolio, currentPrices) {
     return totalValue - GAME_CONFIG.INITIAL_BALANCE;
 }
 
-export function generatePriceMovement(currentPrice, newsImpact = 0, marketTrend = 0) {
+export function generatePriceMovement(currentPrice, newsImpact = 0, marketTrend = 0, tradingVolume = 0) {
     const baseVolatility = 0.03; // Reduced for more realistic movement
     const randomChange = (Math.random() - 0.5) * 2 * baseVolatility;
     
@@ -102,11 +102,59 @@ export function generatePriceMovement(currentPrice, newsImpact = 0, marketTrend 
     // Market trend provides gradual direction
     const trendInfluence = marketTrend * 0.02;
     
-    const totalChange = randomChange + newsInfluence + trendInfluence;
+    // Trading volume affects volatility (more volume = more movement)
+    const volumeInfluence = tradingVolume * 0.001;
+    
+    const totalChange = randomChange + newsInfluence + trendInfluence + volumeInfluence;
     const newPrice = currentPrice * (1 + totalChange);
     
     // Ensure price stays within reasonable bounds
     return Math.max(10, Math.min(200, Number(newPrice.toFixed(2))));
+}
+
+export function generateBotTrade(coinId, currentPrice, marketTrend) {
+    // Bots trade based on market trends and randomness
+    const shouldBuy = marketTrend > 0 ? Math.random() > 0.3 : Math.random() > 0.7;
+    const quantity = (Math.random() * 5 + 1).toFixed(2); // 1-6 units
+    
+    return {
+        type: shouldBuy ? 'buy' : 'sell',
+        coin: coinId,
+        quantity: parseFloat(quantity),
+        price: currentPrice,
+        timestamp: Date.now(),
+        isBot: true
+    };
+}
+
+export function calculateOrderBook(recentTrades, currentPrice) {
+    // Generate realistic order book based on recent trades
+    const buyOrders = [];
+    const sellOrders = [];
+    
+    // Generate 5 buy orders below current price
+    for (let i = 1; i <= 5; i++) {
+        const priceLevel = currentPrice * (1 - (i * 0.005)); // 0.5% intervals
+        const quantity = (Math.random() * 10 + 5).toFixed(2);
+        buyOrders.push({
+            price: priceLevel.toFixed(2),
+            quantity: parseFloat(quantity),
+            total: (priceLevel * quantity).toFixed(2)
+        });
+    }
+    
+    // Generate 5 sell orders above current price
+    for (let i = 1; i <= 5; i++) {
+        const priceLevel = currentPrice * (1 + (i * 0.005)); // 0.5% intervals
+        const quantity = (Math.random() * 10 + 5).toFixed(2);
+        sellOrders.push({
+            price: priceLevel.toFixed(2),
+            quantity: parseFloat(quantity),
+            total: (priceLevel * quantity).toFixed(2)
+        });
+    }
+    
+    return { buyOrders, sellOrders };
 }
 
 export function calculateCarbonFootprint(trades, holdings) {
