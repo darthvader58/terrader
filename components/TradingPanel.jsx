@@ -52,7 +52,7 @@ const TradingPanel = ({
                     <Stat>
                         <StatLabel fontSize="sm">Holdings</StatLabel>
                         <StatNumber fontSize="2xl">
-                            {maxSell.toFixed(2)} {selectedCoin?.symbol}
+                            {maxSell.toFixed(3)} {selectedCoin?.symbol}
                         </StatNumber>
                     </Stat>
                 </HStack>
@@ -69,8 +69,8 @@ const TradingPanel = ({
                             onChange={(_, val) => setQuantity(val)}
                             min={0}
                             max={Math.max(maxBuy, maxSell)}
-                            step={0.1}
-                            precision={2}
+                            step={0.001}
+                            precision={3}
                         >
                             <NumberInputField 
                                 bg="brandBlack.200" 

@@ -68,6 +68,8 @@ const Play = () => {
     const [orderBooks, setOrderBooks] = useState({});
     const [marketStats, setMarketStats] = useState({});
     const [tradingVolumes, setTradingVolumes] = useState({});
+    const [profit, setProfit] = useState(0);
+    const [carbonFootprint, setCarbonFootprint] = useState(10);
 
     useEffect(() => {
         const initialPrices = {};
@@ -77,8 +79,16 @@ const Play = () => {
         const initialVolumes = {};
         const initialStats = {};
         
+        // Different base prices for each coin
+        const basePrices = {
+            'terra': 80 + Math.random() * 20,    // $80-100
+            'gaia': 60 + Math.random() * 20,     // $60-80
+            'enviro': 40 + Math.random() * 20,   // $40-60
+            'dhara': 20 + Math.random() * 20     // $20-40
+        };
+        
         CRYPTO_COINS.forEach(coin => {
-            const basePrice = 50 + Math.random() * 50;
+            const basePrice = basePrices[coin.id];
             initialPrices[coin.id] = {
                 current: basePrice,
                 previous: basePrice,
@@ -200,6 +210,19 @@ const Play = () => {
 
         return () => clearInterval(scoreInterval);
     }, [roomId, user, carbonScore, portfolio, prices]);
+    
+    // Update profit and carbon footprint whenever portfolio or prices change
+    useEffect(() => {
+        const currentProfit = calculateProfit(portfolio, Object.fromEntries(
+            Object.entries(prices).map(([id, p]) => [id, p.current])
+        ));
+        setProfit(currentProfit);
+        
+        const currentFootprint = calculateCarbonFootprint(trades, portfolio.holdings);
+        setCarbonFootprint(currentFootprint);
+        
+        console.log('Updated profit:', currentProfit, 'footprint:', currentFootprint);
+    }, [portfolio, prices, trades]);
 
     const handleGameEnd = async () => {
         if (roomId && user) {
@@ -601,7 +624,7 @@ const Play = () => {
         });
         
         toast({
-            title: `${type === 'buy' ? 'Bought' : 'Sold'} ${quantity.toFixed(2)} ${coin.symbol}`,
+            title: `${type === 'buy' ? 'Bought' : 'Sold'} ${quantity.toFixed(3)} ${coin.symbol}`,
             description: `Carbon score ${scoreChange > 0 ? '+' : ''}${scoreChange}`,
             status: scoreChange > 0 ? "success" : "warning",
             duration: 2000,
