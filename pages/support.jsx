@@ -49,7 +49,7 @@ const Support = () => {
 
             toast({
                 title: 'Submitted successfully!',
-                description: 'We\'ll get back to you soon.',
+                description: 'We will get back to you soon.',
                 status: 'success',
                 duration: 3000,
             });
@@ -82,7 +82,7 @@ const Support = () => {
                         <Box textAlign="center">
                             <Heading size="2xl" mb={2}>Support & Feedback</Heading>
                             <Text color="gray.400">
-                                We'd love to hear from you! Share your feedback or report issues.
+                                We would love to hear from you! Share your feedback or report issues.
                             </Text>
                         </Box>
 
