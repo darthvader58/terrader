@@ -171,6 +171,7 @@ const Play = () => {
 
     useEffect(() => {
         const priceInterval = setInterval(() => {
+            console.log('Price update triggered');
             setPrices(prevPrices => {
                 const newPrices = {};
                 CRYPTO_COINS.forEach(coin => {
@@ -179,43 +180,48 @@ const Play = () => {
                     const trend = marketTrends[coin.id] || 0;
                     const volume = tradingVolumes[coin.id] || 0;
                     
+                    const oldPrice = prevPrices[coin.id]?.current || 50;
                     const newPrice = generatePriceMovement(
-                        prevPrices[coin.id]?.current || 50, 
+                        oldPrice, 
                         newsImpact,
                         trend,
                         volume
                     );
-                    const change = ((newPrice - prevPrices[coin.id]?.current) / prevPrices[coin.id]?.current) * 100;
+                    const change = ((newPrice - oldPrice) / oldPrice) * 100;
+                    
+                    console.log(`${coin.name}: $${oldPrice.toFixed(2)} → $${newPrice.toFixed(2)} (${change.toFixed(2)}%)`);
                     
                     newPrices[coin.id] = {
                         current: newPrice,
-                        previous: prevPrices[coin.id]?.current,
+                        previous: oldPrice,
                         change: change
                     };
                 });
-                return newPrices;
-            });
-
-            setPriceHistory(prevHistory => {
-                const newHistory = { ...prevHistory };
-                const elapsed = GAME_CONFIG.GAME_DURATION - timeLeft;
-                const timeLabel = `${(elapsed / 60).toFixed(1)}m`;
                 
-                CRYPTO_COINS.forEach(coin => {
-                    if (!newHistory[coin.id]) {
-                        newHistory[coin.id] = { labels: [], prices: [] };
-                    }
-                    newHistory[coin.id].labels.push(timeLabel);
-                    newHistory[coin.id].prices.push(prices[coin.id]?.current || 50);
+                // Update price history immediately with new prices
+                setPriceHistory(prevHistory => {
+                    const newHistory = { ...prevHistory };
+                    const elapsed = GAME_CONFIG.GAME_DURATION - timeLeft;
+                    const timeLabel = `${(elapsed / 60).toFixed(1)}m`;
                     
-                    // Keep last 50 data points for better graph
-                    if (newHistory[coin.id].labels.length > 50) {
-                        newHistory[coin.id].labels.shift();
-                        newHistory[coin.id].prices.shift();
-                    }
+                    CRYPTO_COINS.forEach(coin => {
+                        if (!newHistory[coin.id]) {
+                            newHistory[coin.id] = { labels: [], prices: [] };
+                        }
+                        newHistory[coin.id].labels.push(timeLabel);
+                        newHistory[coin.id].prices.push(newPrices[coin.id]?.current || 50);
+                        
+                        // Keep last 50 data points for better graph
+                        if (newHistory[coin.id].labels.length > 50) {
+                            newHistory[coin.id].labels.shift();
+                            newHistory[coin.id].prices.shift();
+                        }
+                    });
+                    
+                    return newHistory;
                 });
                 
-                return newHistory;
+                return newPrices;
             });
             
             // Gradually decay news impact
@@ -232,7 +238,7 @@ const Play = () => {
         }, GAME_CONFIG.PRICE_UPDATE_INTERVAL * 1000);
 
         return () => clearInterval(priceInterval);
-    }, [timeLeft, prices, lastNewsImpact, marketTrends, tradingVolumes]);
+    }, [timeLeft, lastNewsImpact, marketTrends, tradingVolumes]);
 
     const fetchNews = useCallback(async () => {
         setNewsLoading(true);
@@ -354,7 +360,9 @@ const Play = () => {
             CRYPTO_COINS.forEach(coin => {
                 const currentPrice = prices[coin.id]?.current || 50;
                 const coinTrades = recentTrades[coin.id] || [];
-                newOrderBooks[coin.id] = calculateOrderBook(coinTrades, currentPrice);
+                const newsImpact = lastNewsImpact[coin.id] || 0;
+                const trend = marketTrends[coin.id] || 0;
+                newOrderBooks[coin.id] = calculateOrderBook(coinTrades, currentPrice, newsImpact, trend);
             });
             setOrderBooks(newOrderBooks);
             
@@ -381,7 +389,7 @@ const Play = () => {
         }, 2000); // Update every 2 seconds
         
         return () => clearInterval(orderBookInterval);
-    }, [prices, recentTrades, priceHistory]);
+    }, [prices, recentTrades, priceHistory, lastNewsImpact, marketTrends]);
 
     const handleUsePowerUp = (powerUp) => {
         setActivePowerUps(prev => ({ ...prev, [powerUp.id]: true }));

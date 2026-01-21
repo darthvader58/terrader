@@ -127,15 +127,24 @@ export function generateBotTrade(coinId, currentPrice, marketTrend) {
     };
 }
 
-export function calculateOrderBook(recentTrades, currentPrice) {
-    // Generate realistic order book based on recent trades
+export function calculateOrderBook(recentTrades, currentPrice, newsImpact = 0, marketTrend = 0) {
+    // Generate realistic order book based on recent trades and market conditions
     const buyOrders = [];
     const sellOrders = [];
     
-    // Generate 5 buy orders below current price
-    for (let i = 1; i <= 5; i++) {
+    // Adjust order book based on market sentiment
+    const bullishMarket = newsImpact > 0 || marketTrend > 0;
+    const bearishMarket = newsImpact < 0 || marketTrend < 0;
+    
+    // More buy orders in bullish market, more sell orders in bearish
+    const buyOrderCount = bullishMarket ? 7 : bearishMarket ? 3 : 5;
+    const sellOrderCount = bearishMarket ? 7 : bullishMarket ? 3 : 5;
+    
+    // Generate buy orders below current price
+    for (let i = 1; i <= buyOrderCount; i++) {
         const priceLevel = currentPrice * (1 - (i * 0.005)); // 0.5% intervals
-        const quantity = (Math.random() * 10 + 5).toFixed(2);
+        const baseQuantity = bullishMarket ? 15 : 8; // More volume in bullish
+        const quantity = (Math.random() * baseQuantity + 5).toFixed(2);
         buyOrders.push({
             price: priceLevel.toFixed(2),
             quantity: parseFloat(quantity),
@@ -143,10 +152,11 @@ export function calculateOrderBook(recentTrades, currentPrice) {
         });
     }
     
-    // Generate 5 sell orders above current price
-    for (let i = 1; i <= 5; i++) {
+    // Generate sell orders above current price
+    for (let i = 1; i <= sellOrderCount; i++) {
         const priceLevel = currentPrice * (1 + (i * 0.005)); // 0.5% intervals
-        const quantity = (Math.random() * 10 + 5).toFixed(2);
+        const baseQuantity = bearishMarket ? 15 : 8; // More volume in bearish
+        const quantity = (Math.random() * baseQuantity + 5).toFixed(2);
         sellOrders.push({
             price: priceLevel.toFixed(2),
             quantity: parseFloat(quantity),
