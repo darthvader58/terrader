@@ -14,10 +14,49 @@ export const GAME_CONFIG = {
 };
 
 export const POWER_UPS = [
-    { id: 'time_freeze', name: 'Time Freeze', cost: 15, icon: 'time', description: 'Freeze prices for 30 seconds' },
-    { id: 'price_peek', name: 'Price Peek', cost: 20, icon: 'view', description: 'See next price movement' },
-    { id: 'carbon_boost', name: 'Carbon Boost', cost: 25, icon: 'star', description: 'Double carbon score for 1 minute' },
-    { id: 'news_insight', name: 'News Insight', cost: 30, icon: 'info', description: 'Get detailed news analysis' }
+    { 
+        id: 'time_freeze', 
+        name: 'Time Freeze', 
+        cost: 10, 
+        icon: 'time', 
+        description: 'Freeze prices for 30 seconds',
+        duration: 30000,
+        color: '#1CC880'
+    },
+    { 
+        id: 'price_peek', 
+        name: 'Price Insight', 
+        cost: 10, 
+        icon: 'view', 
+        description: 'See next price movement trend',
+        duration: 60000,
+        color: '#00FF9D'
+    },
+    { 
+        id: 'carbon_boost', 
+        name: 'Carbon Multiplier', 
+        cost: 15, 
+        icon: 'star', 
+        description: 'Double carbon score for 1 minute',
+        duration: 60000,
+        multiplier: 2,
+        color: '#4299E1'
+    },
+    { 
+        id: 'news_insight', 
+        name: 'Market Analysis', 
+        cost: 25, 
+        icon: 'info', 
+        description: 'Get detailed market analysis',
+        duration: 90000,
+        color: '#9F7AEA'
+    }
+];
+
+export const ACHIEVEMENTS = [
+    { id: 'win_5x', name: '5x Winner', description: 'Win 5 games', icon: '🏆', requirement: 5 },
+    { id: 'win_100x', name: '100x Champion', description: 'Win 100 games', icon: '💎', requirement: 100 },
+    { id: 'carbon_1k', name: 'Carbon Master', description: 'Earn 1000 carbon score', icon: '🌍', requirement: 1000 },
 ];
 
 export function calculateCarbonScore(trade) {

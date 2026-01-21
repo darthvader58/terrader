@@ -25,9 +25,6 @@ import Graph from "@/components/Graph";
 import CoinSelector from "@/components/CoinSelector";
 import TradingPanel from "@/components/TradingPanel";
 import NewsPanel from "@/components/NewsPanel";
-import CarbonMeter from "@/components/CarbonMeter";
-import PlayerActivityFeed from "@/components/PlayerActivityFeed";
-import PowerUpsPanel from "@/components/PowerUpsPanel";
 import { CRYPTO_COINS, GAME_CONFIG, calculateCarbonScore, calculateProfit, generatePriceMovement, calculateCarbonFootprint } from "@/utils/gameLogic";
 import { useAuth } from "@/contexts/AuthContext";
 import { subscribeToRoom, updatePlayerScore, finishGame } from "@/utils/gameRoom";
@@ -53,8 +50,6 @@ const Play = () => {
     const [leaderboardRank, setLeaderboardRank] = useState(null);
     const [roomData, setRoomData] = useState(null);
     const [liveLeaderboard, setLiveLeaderboard] = useState([]);
-    const [activePowerUps, setActivePowerUps] = useState({});
-    const [carbonMultiplier, setCarbonMultiplier] = useState(1);
 
     useEffect(() => {
         const initialPrices = {};
@@ -213,35 +208,9 @@ const Play = () => {
 
     useEffect(() => {
         fetchNews();
-        // Increase news frequency to every 15-20 seconds for more dynamic market
-        const newsInterval = setInterval(fetchNews, 15000 + Math.random() * 5000);
+        const newsInterval = setInterval(fetchNews, GAME_CONFIG.NEWS_UPDATE_INTERVAL * 1000);
         return () => clearInterval(newsInterval);
     }, [fetchNews]);
-
-    const handleUsePowerUp = (powerUp) => {
-        setActivePowerUps(prev => ({ ...prev, [powerUp.id]: true }));
-        
-        if (powerUp.id === 'carbon_boost') {
-            setCarbonMultiplier(powerUp.multiplier || 2);
-            setTimeout(() => {
-                setCarbonMultiplier(1);
-                setActivePowerUps(prev => {
-                    const updated = { ...prev };
-                    delete updated[powerUp.id];
-                    return updated;
-                });
-            }, powerUp.duration);
-        } else if (powerUp.id === 'time_freeze') {
-            // Implement time freeze logic if needed
-            setTimeout(() => {
-                setActivePowerUps(prev => {
-                    const updated = { ...prev };
-                    delete updated[powerUp.id];
-                    return updated;
-                });
-            }, powerUp.duration);
-        }
-    };
 
     const handleTrade = async (type, coin, quantity, price) => {
         const trade = { type, coin: coin.id, quantity, price, timestamp: Date.now() };
@@ -291,7 +260,7 @@ const Play = () => {
             }));
         }
         
-        const scoreChange = calculateCarbonScore(trade) * carbonMultiplier;
+        const scoreChange = calculateCarbonScore(trade);
         setCarbonScore(prev => prev + scoreChange);
         setTrades(prev => [...prev, trade]);
         
@@ -390,28 +359,7 @@ const Play = () => {
 
                         <Divider />
 
-                        <CarbonMeter 
-                            carbonScore={carbonScore}
-                            carbonFootprint={carbonFootprint}
-                        />
-
-                        <Divider />
-
-                        <PowerUpsPanel 
-                            ownedPowerUps={user?.powerUps || []}
-                            onUsePowerUp={handleUsePowerUp}
-                        />
-
-                        <Divider />
-
                         <NewsPanel news={news} loading={newsLoading} />
-
-                        <Divider />
-
-                        <PlayerActivityFeed 
-                            leaderboard={liveLeaderboard}
-                            currentUserId={user?.uid}
-                        />
 
                         {liveLeaderboard.length > 0 && (
                             <>
