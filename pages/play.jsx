@@ -631,12 +631,6 @@ const Play = () => {
         });
     };
 
-    const profit = calculateProfit(portfolio, Object.fromEntries(
-        Object.entries(prices).map(([id, p]) => [id, p.current])
-    ));
-    
-    const carbonFootprint = calculateCarbonFootprint(trades, portfolio.holdings);
-    
     const mins = Math.floor(timeLeft / 60);
     const secs = timeLeft % 60;
 

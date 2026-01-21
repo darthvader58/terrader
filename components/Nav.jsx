@@ -1,4 +1,4 @@
-import { Box, Flex, Text, HStack, VStack, IconButton, Badge, Button, Menu, MenuButton, MenuList, MenuItem, MenuDivider } from "@chakra-ui/react";
+import { Box, Flex, Text, HStack, VStack, IconButton, Badge, Button, Menu, MenuButton, MenuList, MenuItem, MenuDivider, Image as ChakraImage } from "@chakra-ui/react";
 import { AddIcon, SettingsIcon } from "@chakra-ui/icons";
 import { FaUser, FaQuestionCircle, FaSignOutAlt } from "react-icons/fa";
 import Image from "next/image";
@@ -83,12 +83,15 @@ const Nav = () => {
                                 overflow="hidden"
                                 border="2px solid"
                                 borderColor="green.400"
+                                w="70px"
+                                h="70px"
                             >
-                                <Image
+                                <ChakraImage
                                     src={user?.photoURL || "/assets/avatar.svg"}
                                     alt="avatar"
-                                    width={70}
-                                    height={70}
+                                    w="70px"
+                                    h="70px"
+                                    objectFit="cover"
                                 />
                             </Box>
                         </HStack>

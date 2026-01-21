@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import LeftNav from "@/components/LeftNav";
 import Nav from "@/components/Nav";
-import Image from "next/image";
 import { TimeIcon, ViewIcon, StarIcon, InfoIcon, EditIcon, CheckIcon, CloseIcon } from "@chakra-ui/icons";
 import {
     Box,
@@ -28,6 +27,7 @@ import {
     TabPanels,
     Tab,
     TabPanel,
+    Image,
 } from "@chakra-ui/react";
 import { POWER_UPS } from "@/utils/gameLogic";
 import { getUserGameHistory } from "@/utils/gameRoom";
@@ -233,12 +233,15 @@ const Profile = () => {
                                                     cursor="pointer"
                                                     onClick={() => document.getElementById('profile-pic-upload').click()}
                                                     _hover={{ opacity: 0.8 }}
+                                                    w="80px"
+                                                    h="80px"
                                                 >
                                                     <Image
                                                         src={user?.photoURL || "/assets/avatar.svg"}
                                                         alt="avatar"
-                                                        width={80}
-                                                        height={80}
+                                                        w="80px"
+                                                        h="80px"
+                                                        objectFit="cover"
                                                     />
                                                 </Box>
                                                 <input
