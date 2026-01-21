@@ -44,12 +44,71 @@ const Profile = () => {
     const [gameHistory, setGameHistory] = useState([]);
     const [ownedPowerUps, setOwnedPowerUps] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [uploading, setUploading] = useState(false);
     
     const iconMap = {
         time: TimeIcon,
         view: ViewIcon,
         star: StarIcon,
         info: InfoIcon,
+    };
+    
+    const handleProfilePicChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // Check file size (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            toast({
+                title: "File too large",
+                description: "Please select an image under 2MB",
+                status: "error",
+                duration: 3000,
+            });
+            return;
+        }
+        
+        setUploading(true);
+        
+        try {
+            // Convert to base64
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const base64String = reader.result;
+                
+                // Update user profile with new photo
+                const userRef = doc(db, 'users', user.uid);
+                await updateDoc(userRef, {
+                    photoURL: base64String
+                });
+                
+                // Update auth context
+                if (updateUserProfile) {
+                    await updateUserProfile({ photoURL: base64String });
+                }
+                
+                toast({
+                    title: "Profile picture updated",
+                    status: "success",
+                    duration: 3000,
+                });
+                
+                // Reload page to show new picture
+                window.location.reload();
+            };
+            
+            reader.readAsDataURL(file);
+        } catch (error) {
+            console.error('Error uploading profile picture:', error);
+            toast({
+                title: "Upload failed",
+                description: error.message,
+                status: "error",
+                duration: 3000,
+            });
+        } finally {
+            setUploading(false);
+        }
     };
 
     useEffect(() => {
@@ -164,19 +223,33 @@ const Profile = () => {
                                         boxShadow="0 8px 32px rgba(0, 0, 0, 0.3)"
                                     >
                                         <HStack spacing={8} mb={6}>
-                                            <Box
-                                                borderRadius="full"
-                                                overflow="hidden"
-                                                border="3px solid"
-                                                borderColor="green.400"
-                                            >
-                                                <Image
-                                                    src={user?.photoURL || "/assets/avatar2.svg"}
-                                                    alt="avatar"
-                                                    width={80}
-                                                    height={80}
+                                            <VStack>
+                                                <Box
+                                                    borderRadius="full"
+                                                    overflow="hidden"
+                                                    border="3px solid"
+                                                    borderColor="green.400"
+                                                    position="relative"
+                                                    cursor="pointer"
+                                                    onClick={() => document.getElementById('profile-pic-upload').click()}
+                                                    _hover={{ opacity: 0.8 }}
+                                                >
+                                                    <Image
+                                                        src={user?.photoURL || "/assets/avatar.svg"}
+                                                        alt="avatar"
+                                                        width={80}
+                                                        height={80}
+                                                    />
+                                                </Box>
+                                                <input
+                                                    id="profile-pic-upload"
+                                                    type="file"
+                                                    accept="image/*"
+                                                    style={{ display: 'none' }}
+                                                    onChange={handleProfilePicChange}
                                                 />
-                                            </Box>
+                                                <Text fontSize="xs" color="gray.500">Click to change</Text>
+                                            </VStack>
                                             <VStack align="start" flex={1} spacing={2}>
                                                 <HStack w="full">
                                                     <Input

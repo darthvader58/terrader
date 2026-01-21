@@ -28,7 +28,7 @@ const Home = () => {
 
     useEffect(() => {
         if (user && !loading) {
-            router.push('/dash');
+            router.push('/lobby'); // Changed from /dash to /lobby
         }
     }, [user, loading, router]);
 
@@ -43,7 +43,7 @@ const Home = () => {
                 status: "success",
                 duration: 3000,
             });
-            router.push('/dash');
+            router.push('/lobby'); // Changed from /dash to /lobby
         } else {
             toast({
                 title: "Sign-in failed",
@@ -253,7 +253,7 @@ const Home = () => {
                                 <Text fontSize="sm" color="gray.200" textAlign="center">
                                     Terrader features 4 unique cryptocurrencies: TerraCoin, Gaiacoin, 
                                     Envirocoin, and DharaCoin. Start with $500 virtual currency and 
-                                    compete in 15-minute matches. Your carbon score determines your 
+                                    compete in 20-minute matches. Your carbon score determines your 
                                     leaderboard position, encouraging sustainable trading practices.
                                 </Text>
                             </VStack>

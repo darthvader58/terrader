@@ -7,10 +7,10 @@ export const CRYPTO_COINS = [
 
 export const GAME_CONFIG = {
     INITIAL_BALANCE: 500,
-    GAME_DURATION: 15 * 60,
+    GAME_DURATION: 20 * 60, // Changed from 15 to 20 minutes
     LEADERBOARD_UPDATE_INTERVAL: 2 * 60,
     NEWS_UPDATE_INTERVAL: 30,
-    PRICE_UPDATE_INTERVAL: 5,
+    PRICE_UPDATE_INTERVAL: 2, // 2 seconds for dynamic prices
 };
 
 export const POWER_UPS = [
@@ -93,19 +93,23 @@ export function calculateProfit(portfolio, currentPrices) {
 }
 
 export function generatePriceMovement(currentPrice, newsImpact = 0, marketTrend = 0, tradingVolume = 0) {
-    const baseVolatility = 0.08; // Increased from 0.03 for more dramatic movement
+    // Much higher base volatility for visible price changes
+    const baseVolatility = 0.15; // Increased from 0.08 to 0.15 (15% swings)
     const randomChange = (Math.random() - 0.5) * 2 * baseVolatility;
     
-    // News has significant impact (up to 8% change)
-    const newsInfluence = newsImpact * 0.08; // Increased from 0.05
+    // News has massive impact (up to 12% change)
+    const newsInfluence = newsImpact * 0.12; // Increased from 0.08
     
-    // Market trend provides gradual direction
-    const trendInfluence = marketTrend * 0.04; // Increased from 0.02
+    // Market trend provides strong direction
+    const trendInfluence = marketTrend * 0.06; // Increased from 0.04
     
-    // Trading volume affects volatility (more volume = more movement)
-    const volumeInfluence = tradingVolume * 0.002; // Increased from 0.001
+    // Trading volume affects volatility significantly
+    const volumeInfluence = tradingVolume * 0.003; // Increased from 0.002
     
-    const totalChange = randomChange + newsInfluence + trendInfluence + volumeInfluence;
+    // Add constant movement to ensure prices never stay flat
+    const constantMovement = (Math.random() - 0.5) * 0.02; // ±1% minimum movement
+    
+    const totalChange = randomChange + newsInfluence + trendInfluence + volumeInfluence + constantMovement;
     const newPrice = currentPrice * (1 + totalChange);
     
     // Ensure price stays within reasonable bounds
@@ -173,16 +177,46 @@ export function calculateOrderBook(recentTrades, currentPrice, newsImpact = 0, m
 export function calculateCarbonFootprint(trades, holdings) {
     let footprint = 0;
     
-    // Each trade adds to footprint
+    // Each trade adds significantly to footprint
     trades.forEach(trade => {
-        footprint += Math.abs(trade.quantity * trade.price * 0.001);
+        footprint += Math.abs(trade.quantity * trade.price * 0.01); // Increased from 0.001
     });
     
     // Holding coins reduces footprint over time (sustainable holding)
     Object.values(holdings).forEach(holding => {
-        footprint -= holding.quantity * 0.0002; // Negative = good
+        footprint -= holding.quantity * 0.002; // Increased from 0.0002
     });
     
-    // Return absolute value, lower is better
-    return Math.max(0, Math.floor(footprint));
+    // Return absolute value, lower is better, ensure it's always positive and visible
+    return Math.max(10, Math.floor(footprint)); // Minimum 10 to show movement
+}
+
+export function calculateCreditsEarned(rank, totalPlayers, carbonScore, profit) {
+    // Base credits based on rank
+    let credits = 0;
+    
+    if (rank === 1) {
+        credits = 100; // 1st place
+    } else if (rank === 2) {
+        credits = 75; // 2nd place
+    } else if (rank === 3) {
+        credits = 50; // 3rd place
+    } else if (rank <= totalPlayers / 2) {
+        credits = 30; // Top half
+    } else {
+        credits = 10; // Bottom half
+    }
+    
+    // Bonus for positive carbon score (max +50)
+    if (carbonScore > 0) {
+        credits += Math.min(50, Math.floor(carbonScore / 10));
+    }
+    
+    // Bonus for profit (max +50)
+    if (profit > 0) {
+        credits += Math.min(50, Math.floor(profit / 10));
+    }
+    
+    // Minimum 10 credits for participation
+    return Math.max(10, credits);
 }

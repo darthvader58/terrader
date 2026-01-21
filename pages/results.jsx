@@ -31,17 +31,22 @@ import Link from 'next/link';
 const Results = () => {
     const { user } = useAuth();
     const router = useRouter();
-    const { roomId } = router.query;
+    const { roomId, credits } = router.query;
     
     const [results, setResults] = useState(null);
     const [loading, setLoading] = useState(true);
     const [userRank, setUserRank] = useState(null);
+    const [creditsEarned, setCreditsEarned] = useState(0);
 
     useEffect(() => {
         if (!roomId) return;
         
+        if (credits) {
+            setCreditsEarned(parseInt(credits));
+        }
+        
         loadResults();
-    }, [roomId]);
+    }, [roomId, credits]);
 
     const loadResults = async () => {
         try {
@@ -140,14 +145,16 @@ const Results = () => {
                                             ${userRank.profit?.toFixed(2)}
                                         </Text>
                                     </VStack>
-                                    <VStack>
-                                        <Text fontSize="sm" color="gray.400">
-                                            Credits Earned
-                                        </Text>
-                                        <Text fontSize="3xl" fontWeight="bold" color="yellow.400">
-                                            +{userRank.rank <= 3 ? 50 : 10}
-                                        </Text>
-                                    </VStack>
+                                    {creditsEarned > 0 && (
+                                        <VStack>
+                                            <Text fontSize="sm" color="gray.400">
+                                                Credits Earned
+                                            </Text>
+                                            <Text fontSize="3xl" fontWeight="bold" color="yellow.400">
+                                                +{creditsEarned}
+                                            </Text>
+                                        </VStack>
+                                    )}
                                 </HStack>
                             </VStack>
                         </Box>

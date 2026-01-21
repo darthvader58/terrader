@@ -19,6 +19,7 @@ import {
     Tab,
     TabPanel,
     Button,
+    Progress,
 } from "@chakra-ui/react";
 import { TimeIcon, StarIcon, ViewIcon, InfoIcon } from "@chakra-ui/icons";
 import { FaTrophy } from "react-icons/fa";
@@ -29,13 +30,12 @@ import Graph from "@/components/Graph";
 import CoinSelector from "@/components/CoinSelector";
 import TradingPanel from "@/components/TradingPanel";
 import NewsPanel from "@/components/NewsPanel";
-import CarbonMeter from "@/components/CarbonMeter";
 import PlayerActivityFeed from "@/components/PlayerActivityFeed";
 import PowerUpsPanel from "@/components/PowerUpsPanel";
 import OrderBook from "@/components/OrderBook";
 import MarketDepth from "@/components/MarketDepth";
 import RecentTrades from "@/components/RecentTrades";
-import { CRYPTO_COINS, GAME_CONFIG, POWER_UPS, calculateCarbonScore, calculateProfit, generatePriceMovement, calculateCarbonFootprint, generateBotTrade, calculateOrderBook } from "@/utils/gameLogic";
+import { CRYPTO_COINS, GAME_CONFIG, POWER_UPS, calculateCarbonScore, calculateProfit, generatePriceMovement, calculateCarbonFootprint, generateBotTrade, calculateOrderBook, calculateCreditsEarned } from "@/utils/gameLogic";
 import { useAuth } from "@/contexts/AuthContext";
 import { subscribeToRoom, updatePlayerScore, finishGame } from "@/utils/gameRoom";
 
@@ -95,14 +95,15 @@ const Play = () => {
                 labels: initialLabels,
                 prices: initialPriceData
             };
-            initialTrends[coin.id] = (Math.random() - 0.5) * 0.5; // Initial trend
+            // Start with stronger initial trends for immediate movement
+            initialTrends[coin.id] = (Math.random() - 0.5) * 1.0; // Increased from 0.5
             initialTrades[coin.id] = [];
-            initialVolumes[coin.id] = 0;
+            initialVolumes[coin.id] = Math.random() * 100; // Start with some volume
             initialStats[coin.id] = {
-                volume24h: 0,
-                trades24h: 0,
-                buyPressure: 50,
-                volatility: 0
+                volume24h: Math.random() * 500,
+                trades24h: Math.floor(Math.random() * 20),
+                buyPressure: 30 + Math.random() * 40, // Random between 30-70
+                volatility: 2 + Math.random() * 3 // Start with some volatility
             };
         });
         
@@ -115,6 +116,7 @@ const Play = () => {
         
         console.log('Initial prices set:', initialPrices);
         console.log('Initial history set:', initialHistory);
+        console.log('Initial trends set:', initialTrends);
     }, []);
 
     useEffect(() => {
@@ -131,6 +133,34 @@ const Play = () => {
 
         return () => clearInterval(timer);
     }, [router]);
+    
+    // Penalize leaving game (page unload/reload)
+    useEffect(() => {
+        const handleBeforeUnload = async (e) => {
+            if (user && roomId) {
+                // Deduct 100 credits for leaving
+                try {
+                    const { doc, updateDoc, increment } = await import('firebase/firestore');
+                    const { db } = await import('@/db');
+                    const userRef = doc(db, 'users', user.uid);
+                    await updateDoc(userRef, {
+                        credits: increment(-100)
+                    });
+                } catch (error) {
+                    console.error('Error deducting credits:', error);
+                }
+            }
+            
+            e.preventDefault();
+            e.returnValue = '';
+        };
+        
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [user, roomId]);
 
     useEffect(() => {
         if (!roomId || !user) return;
@@ -172,11 +202,54 @@ const Play = () => {
     }, [roomId, user, carbonScore, portfolio, prices]);
 
     const handleGameEnd = async () => {
-        if (roomId) {
+        if (roomId && user) {
+            const finalProfit = calculateProfit(portfolio, Object.fromEntries(
+                Object.entries(prices).map(([id, p]) => [id, p.current])
+            ));
+            
+            const myRank = leaderboardRank || liveLeaderboard.findIndex(p => p.userId === user.uid) + 1 || 1;
+            const totalPlayers = liveLeaderboard.length || 1;
+            
+            // Calculate credits earned
+            const creditsEarned = calculateCreditsEarned(myRank, totalPlayers, carbonScore, finalProfit);
+            
+            // Save game result to database
+            try {
+                const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+                const { db } = await import('@/db');
+                
+                const gameResultRef = doc(db, 'gameHistory', `${user.uid}_${Date.now()}`);
+                await setDoc(gameResultRef, {
+                    userId: user.uid,
+                    roomId: roomId,
+                    rank: myRank,
+                    totalPlayers: totalPlayers,
+                    carbonScore: carbonScore,
+                    profit: finalProfit,
+                    creditsEarned: creditsEarned,
+                    playedAt: serverTimestamp(),
+                    duration: GAME_CONFIG.GAME_DURATION,
+                });
+                
+                // Update user's total credits
+                const userRef = doc(db, 'users', user.uid);
+                const { getDoc, updateDoc, increment } = await import('firebase/firestore');
+                const userDoc = await getDoc(userRef);
+                if (userDoc.exists()) {
+                    await updateDoc(userRef, {
+                        credits: increment(creditsEarned),
+                        totalGames: increment(1),
+                        ...(myRank === 1 ? { wins: increment(1) } : {})
+                    });
+                }
+            } catch (error) {
+                console.error('Error saving game result:', error);
+            }
+            
             await finishGame(roomId);
-            router.push(`/results?roomId=${roomId}`);
+            router.push(`/results?roomId=${roomId}&credits=${creditsEarned}`);
         } else {
-            router.push('/dash');
+            router.push('/lobby');
         }
     };
 
@@ -317,23 +390,39 @@ const Play = () => {
         return () => clearInterval(newsInterval);
     }, [fetchNews]);
     
-    // Bot trading activity - more frequent and competitive
+    // Bot trading activity - more frequent and competitive with score updates
     useEffect(() => {
-        if (!roomData || !roomData.players) return;
+        if (!roomId || !roomData || !roomData.players) return;
         
         const botPlayers = Object.values(roomData.players).filter(p => p.isBot);
         if (botPlayers.length === 0) return;
         
-        const botTradingInterval = setInterval(() => {
+        const botTradingInterval = setInterval(async () => {
             // Multiple bots can trade at once
             const numBotsTrading = Math.min(botPlayers.length, Math.floor(Math.random() * 2) + 1);
             
             for (let i = 0; i < numBotsTrading; i++) {
+                const bot = botPlayers[Math.floor(Math.random() * botPlayers.length)];
                 const randomCoin = CRYPTO_COINS[Math.floor(Math.random() * CRYPTO_COINS.length)];
                 const currentPrice = prices[randomCoin.id]?.current || 50;
                 const trend = marketTrends[randomCoin.id] || 0;
                 
                 const botTrade = generateBotTrade(randomCoin.id, currentPrice, trend);
+                
+                // Calculate carbon score for bot trade
+                const botScoreChange = calculateCarbonScore(botTrade);
+                
+                // Update bot's score in Firestore
+                if (roomData.leaderboard && roomData.leaderboard[bot.userId]) {
+                    const currentBotScore = roomData.leaderboard[bot.userId].carbonScore || 0;
+                    await updatePlayerScore(
+                        roomId, 
+                        bot.userId, 
+                        currentBotScore + botScoreChange,
+                        0, // Bots don't track profit
+                        {} // Bots don't track portfolio
+                    );
+                }
                 
                 // Add to recent trades
                 setRecentTrades(prev => ({
@@ -363,10 +452,10 @@ const Play = () => {
                     };
                 });
             }
-        }, 2000 + Math.random() * 2000); // Bot trades every 2-4 seconds (increased frequency)
+        }, 2000 + Math.random() * 2000); // Bot trades every 2-4 seconds
         
         return () => clearInterval(botTradingInterval);
-    }, [roomData, prices, marketTrends]);
+    }, [roomId, roomData, prices, marketTrends]);
     
     // Update order books and calculate volatility
     useEffect(() => {
@@ -536,13 +625,13 @@ const Play = () => {
                         <HStack justify="space-between">
                             <HStack spacing={6}>
                                 <Stat>
-                                    <StatLabel>Your Profit</StatLabel>
+                                    <StatLabel>{profit >= 0 ? 'Your Profit' : 'Your Loss'}</StatLabel>
                                     <StatNumber color={profit >= 0 ? "green.400" : "red.400"}>
-                                        ${profit.toFixed(2)}
+                                        ${Math.abs(profit).toFixed(2)}
                                     </StatNumber>
                                     <StatHelpText>
                                         <StatArrow type={profit >= 0 ? "increase" : "decrease"} />
-                                        {((profit / GAME_CONFIG.INITIAL_BALANCE) * 100).toFixed(2)}%
+                                        {Math.abs((profit / GAME_CONFIG.INITIAL_BALANCE) * 100).toFixed(2)}%
                                     </StatHelpText>
                                 </Stat>
                                 
@@ -554,6 +643,14 @@ const Play = () => {
                                     <StatHelpText>
                                         {carbonFootprint < 200 ? "Excellent" : carbonFootprint < 400 ? "Good" : "Poor"}
                                     </StatHelpText>
+                                    <Box mt={2} w="150px">
+                                        <Progress 
+                                            value={(carbonFootprint / 1000) * 100} 
+                                            colorScheme={carbonFootprint < 200 ? "green" : carbonFootprint < 400 ? "yellow" : "red"}
+                                            size="sm"
+                                            borderRadius="full"
+                                        />
+                                    </Box>
                                 </Stat>
                             </HStack>
                             
@@ -573,7 +670,7 @@ const Play = () => {
                                     variant="outline"
                                     mt={2}
                                     onClick={() => {
-                                        if (confirm('Leave game? You will lose 10 credits and your progress will not be saved.')) {
+                                        if (confirm('Leave game? You will lose 100 credits and your progress will not be saved.')) {
                                             router.push('/dash');
                                         }
                                     }}
@@ -689,13 +786,6 @@ const Play = () => {
                                 </TabPanel>
                             </TabPanels>
                         </Tabs>
-
-                        <Divider />
-
-                        <CarbonMeter 
-                            carbonScore={carbonScore}
-                            carbonFootprint={carbonFootprint}
-                        />
 
                         <Divider />
 
