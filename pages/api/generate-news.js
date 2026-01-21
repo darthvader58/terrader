@@ -1,4 +1,4 @@
-import { OpenAI } from 'openai';
+import OpenAI from 'openai';
 
 const CRYPTO_COINS = ['TerraCoin', 'Gaiacoin', 'Envirocoin', 'DharaCoin'];
 
