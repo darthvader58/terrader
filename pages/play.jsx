@@ -18,6 +18,7 @@ import {
     TabPanels,
     Tab,
     TabPanel,
+    Button,
 } from "@chakra-ui/react";
 import { TimeIcon, StarIcon, ViewIcon, InfoIcon } from "@chakra-ui/icons";
 import { FaTrophy } from "react-icons/fa";
@@ -83,9 +84,16 @@ const Play = () => {
                 previous: basePrice,
                 change: 0
             };
+            // Initialize with some data points for immediate graph display
+            const initialLabels = ['0.0m'];
+            const initialPriceData = [basePrice];
+            for (let i = 1; i <= 10; i++) {
+                initialLabels.push(`${(i * 0.5).toFixed(1)}m`);
+                initialPriceData.push(basePrice + (Math.random() - 0.5) * 5);
+            }
             initialHistory[coin.id] = {
-                labels: ['0m'],
-                prices: [basePrice]
+                labels: initialLabels,
+                prices: initialPriceData
             };
             initialTrends[coin.id] = (Math.random() - 0.5) * 0.5; // Initial trend
             initialTrades[coin.id] = [];
@@ -104,6 +112,9 @@ const Play = () => {
         setRecentTrades(initialTrades);
         setTradingVolumes(initialVolumes);
         setMarketStats(initialStats);
+        
+        console.log('Initial prices set:', initialPrices);
+        console.log('Initial history set:', initialHistory);
     }, []);
 
     useEffect(() => {
@@ -306,7 +317,7 @@ const Play = () => {
         return () => clearInterval(newsInterval);
     }, [fetchNews]);
     
-    // Bot trading activity
+    // Bot trading activity - more frequent and competitive
     useEffect(() => {
         if (!roomData || !roomData.players) return;
         
@@ -314,41 +325,45 @@ const Play = () => {
         if (botPlayers.length === 0) return;
         
         const botTradingInterval = setInterval(() => {
-            // Random bot makes a trade
-            const randomCoin = CRYPTO_COINS[Math.floor(Math.random() * CRYPTO_COINS.length)];
-            const currentPrice = prices[randomCoin.id]?.current || 50;
-            const trend = marketTrends[randomCoin.id] || 0;
+            // Multiple bots can trade at once
+            const numBotsTrading = Math.min(botPlayers.length, Math.floor(Math.random() * 2) + 1);
             
-            const botTrade = generateBotTrade(randomCoin.id, currentPrice, trend);
-            
-            // Add to recent trades
-            setRecentTrades(prev => ({
-                ...prev,
-                [randomCoin.id]: [botTrade, ...(prev[randomCoin.id] || [])].slice(0, 20)
-            }));
-            
-            // Update trading volume
-            setTradingVolumes(prev => ({
-                ...prev,
-                [randomCoin.id]: (prev[randomCoin.id] || 0) + (botTrade.quantity * botTrade.price)
-            }));
-            
-            // Update market stats
-            setMarketStats(prev => {
-                const coinStats = prev[randomCoin.id] || { volume24h: 0, trades24h: 0, buyPressure: 50, volatility: 0 };
-                return {
+            for (let i = 0; i < numBotsTrading; i++) {
+                const randomCoin = CRYPTO_COINS[Math.floor(Math.random() * CRYPTO_COINS.length)];
+                const currentPrice = prices[randomCoin.id]?.current || 50;
+                const trend = marketTrends[randomCoin.id] || 0;
+                
+                const botTrade = generateBotTrade(randomCoin.id, currentPrice, trend);
+                
+                // Add to recent trades
+                setRecentTrades(prev => ({
                     ...prev,
-                    [randomCoin.id]: {
-                        ...coinStats,
-                        volume24h: coinStats.volume24h + (botTrade.quantity * botTrade.price),
-                        trades24h: coinStats.trades24h + 1,
-                        buyPressure: botTrade.type === 'buy' ? 
-                            Math.min(100, coinStats.buyPressure + 2) : 
-                            Math.max(0, coinStats.buyPressure - 2)
-                    }
-                };
-            });
-        }, 3000 + Math.random() * 4000); // Bot trades every 3-7 seconds
+                    [randomCoin.id]: [botTrade, ...(prev[randomCoin.id] || [])].slice(0, 20)
+                }));
+                
+                // Update trading volume
+                setTradingVolumes(prev => ({
+                    ...prev,
+                    [randomCoin.id]: (prev[randomCoin.id] || 0) + (botTrade.quantity * botTrade.price)
+                }));
+                
+                // Update market stats
+                setMarketStats(prev => {
+                    const coinStats = prev[randomCoin.id] || { volume24h: 0, trades24h: 0, buyPressure: 50, volatility: 0 };
+                    return {
+                        ...prev,
+                        [randomCoin.id]: {
+                            ...coinStats,
+                            volume24h: coinStats.volume24h + (botTrade.quantity * botTrade.price),
+                            trades24h: coinStats.trades24h + 1,
+                            buyPressure: botTrade.type === 'buy' ? 
+                                Math.min(100, coinStats.buyPressure + 3) : 
+                                Math.max(0, coinStats.buyPressure - 3)
+                        }
+                    };
+                });
+            }
+        }, 2000 + Math.random() * 2000); // Bot trades every 2-4 seconds (increased frequency)
         
         return () => clearInterval(botTradingInterval);
     }, [roomData, prices, marketTrends]);
@@ -519,16 +534,28 @@ const Play = () => {
                 <Box flex={1} p={6} overflowY="auto">
                     <VStack spacing={6} align="stretch">
                         <HStack justify="space-between">
-                            <Stat>
-                                <StatLabel>Your Profit</StatLabel>
-                                <StatNumber color={profit >= 0 ? "green.400" : "red.400"}>
-                                    ${profit.toFixed(2)}
-                                </StatNumber>
-                                <StatHelpText>
-                                    <StatArrow type={profit >= 0 ? "increase" : "decrease"} />
-                                    {((profit / GAME_CONFIG.INITIAL_BALANCE) * 100).toFixed(2)}%
-                                </StatHelpText>
-                            </Stat>
+                            <HStack spacing={6}>
+                                <Stat>
+                                    <StatLabel>Your Profit</StatLabel>
+                                    <StatNumber color={profit >= 0 ? "green.400" : "red.400"}>
+                                        ${profit.toFixed(2)}
+                                    </StatNumber>
+                                    <StatHelpText>
+                                        <StatArrow type={profit >= 0 ? "increase" : "decrease"} />
+                                        {((profit / GAME_CONFIG.INITIAL_BALANCE) * 100).toFixed(2)}%
+                                    </StatHelpText>
+                                </Stat>
+                                
+                                <Stat>
+                                    <StatLabel>Carbon Footprint</StatLabel>
+                                    <StatNumber color={carbonFootprint < 200 ? "green.400" : carbonFootprint < 400 ? "yellow.400" : "red.400"}>
+                                        {carbonFootprint}
+                                    </StatNumber>
+                                    <StatHelpText>
+                                        {carbonFootprint < 200 ? "Excellent" : carbonFootprint < 400 ? "Good" : "Poor"}
+                                    </StatHelpText>
+                                </Stat>
+                            </HStack>
                             
                             <Stat textAlign="center">
                                 <StatLabel>
@@ -540,38 +567,62 @@ const Play = () => {
                                 <StatNumber fontSize="4xl">
                                     {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
                                 </StatNumber>
+                                <Button
+                                    size="sm"
+                                    colorScheme="red"
+                                    variant="outline"
+                                    mt={2}
+                                    onClick={() => {
+                                        if (confirm('Leave game? You will lose 10 credits and your progress will not be saved.')) {
+                                            router.push('/dash');
+                                        }
+                                    }}
+                                >
+                                    Leave Game
+                                </Button>
                             </Stat>
                             
-                            <Stat textAlign="right">
-                                <StatLabel>
-                                    <HStack justify="flex-end" spacing={2}>
-                                        <Text>Carbon Score</Text>
-                                        {/* Power-ups as icons */}
-                                        {Object.keys(activePowerUps).map(powerUpId => {
-                                            const powerUp = POWER_UPS.find(p => p.id === powerUpId);
-                                            if (!powerUp) return null;
-                                            const IconComponent = powerUp.icon === 'time' ? TimeIcon : 
-                                                                 powerUp.icon === 'view' ? ViewIcon :
-                                                                 powerUp.icon === 'star' ? StarIcon : InfoIcon;
-                                            return (
-                                                <Icon 
-                                                    key={powerUpId}
-                                                    as={IconComponent} 
-                                                    color={powerUp.color || 'green.400'}
-                                                    boxSize={4}
-                                                />
-                                            );
-                                        })}
+                            <HStack spacing={6}>
+                                <Stat textAlign="right">
+                                    <StatLabel>
+                                        <HStack justify="flex-end">
+                                            <Text>Carbon Score</Text>
+                                        </HStack>
+                                    </StatLabel>
+                                    <StatNumber color={carbonScore >= 0 ? "green.400" : "red.400"}>
+                                        <HStack justify="flex-end">
+                                            <StarIcon />
+                                            <Text>{carbonScore}</Text>
+                                        </HStack>
+                                    </StatNumber>
+                                    <StatHelpText>Rank: #{leaderboardRank || '—'}</StatHelpText>
+                                </Stat>
+                                
+                                <VStack spacing={1} align="flex-end">
+                                    <Text fontSize="xs" color="gray.400">Power-Ups</Text>
+                                    <HStack spacing={1}>
+                                        {Object.keys(activePowerUps).length === 0 ? (
+                                            <Text fontSize="xs" color="gray.500">None active</Text>
+                                        ) : (
+                                            Object.keys(activePowerUps).map(powerUpId => {
+                                                const powerUp = POWER_UPS.find(p => p.id === powerUpId);
+                                                if (!powerUp) return null;
+                                                const IconComponent = powerUp.icon === 'time' ? TimeIcon : 
+                                                                     powerUp.icon === 'view' ? ViewIcon :
+                                                                     powerUp.icon === 'star' ? StarIcon : InfoIcon;
+                                                return (
+                                                    <Icon 
+                                                        key={powerUpId}
+                                                        as={IconComponent} 
+                                                        color={powerUp.color || 'green.400'}
+                                                        boxSize={5}
+                                                    />
+                                                );
+                                            })
+                                        )}
                                     </HStack>
-                                </StatLabel>
-                                <StatNumber color={carbonScore >= 0 ? "green.400" : "red.400"}>
-                                    <HStack justify="flex-end">
-                                        <StarIcon />
-                                        <Text>{carbonScore}</Text>
-                                    </HStack>
-                                </StatNumber>
-                                <StatHelpText>Footprint: {carbonFootprint}</StatHelpText>
-                            </Stat>
+                                </VStack>
+                            </HStack>
                         </HStack>
 
                         <CoinSelector
@@ -655,6 +706,8 @@ const Play = () => {
                         <PlayerActivityFeed 
                             leaderboard={liveLeaderboard}
                             currentUserId={user?.uid}
+                            recentTrades={recentTrades}
+                            prices={prices}
                         />
 
                         {liveLeaderboard.length > 0 && (

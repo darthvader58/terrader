@@ -93,17 +93,17 @@ export function calculateProfit(portfolio, currentPrices) {
 }
 
 export function generatePriceMovement(currentPrice, newsImpact = 0, marketTrend = 0, tradingVolume = 0) {
-    const baseVolatility = 0.03; // Reduced for more realistic movement
+    const baseVolatility = 0.08; // Increased from 0.03 for more dramatic movement
     const randomChange = (Math.random() - 0.5) * 2 * baseVolatility;
     
-    // News has significant impact (up to 5% change)
-    const newsInfluence = newsImpact * 0.05;
+    // News has significant impact (up to 8% change)
+    const newsInfluence = newsImpact * 0.08; // Increased from 0.05
     
     // Market trend provides gradual direction
-    const trendInfluence = marketTrend * 0.02;
+    const trendInfluence = marketTrend * 0.04; // Increased from 0.02
     
     // Trading volume affects volatility (more volume = more movement)
-    const volumeInfluence = tradingVolume * 0.001;
+    const volumeInfluence = tradingVolume * 0.002; // Increased from 0.001
     
     const totalChange = randomChange + newsInfluence + trendInfluence + volumeInfluence;
     const newPrice = currentPrice * (1 + totalChange);
@@ -113,9 +113,12 @@ export function generatePriceMovement(currentPrice, newsImpact = 0, marketTrend 
 }
 
 export function generateBotTrade(coinId, currentPrice, marketTrend) {
-    // Bots trade based on market trends and randomness
-    const shouldBuy = marketTrend > 0 ? Math.random() > 0.3 : Math.random() > 0.7;
-    const quantity = (Math.random() * 5 + 1).toFixed(2); // 1-6 units
+    // Bots trade more aggressively based on market trends
+    const shouldBuy = marketTrend > 0.1 ? Math.random() > 0.2 : // 80% buy in strong bullish
+                      marketTrend < -0.1 ? Math.random() > 0.8 : // 20% buy in strong bearish
+                      Math.random() > 0.5; // 50% in neutral
+    
+    const quantity = (Math.random() * 10 + 2).toFixed(2); // 2-12 units (increased from 1-6)
     
     return {
         type: shouldBuy ? 'buy' : 'sell',
