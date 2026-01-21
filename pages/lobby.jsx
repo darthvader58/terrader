@@ -150,7 +150,7 @@ const Lobby = () => {
         if (!user || !inviteCode) return;
         
         try {
-            const roomData = await joinRoomByInviteCode(inviteCode.toUpperCase(), user.uid, user.username);
+            const roomData = await joinRoomByInviteCode(inviteCode.trim().toUpperCase(), user.uid, user.username);
             toast({
                 title: 'Joined room!',
                 status: 'success',
@@ -172,12 +172,29 @@ const Lobby = () => {
         if (!user) return;
         
         try {
-            const globalRoom = await getOrCreateGlobalRoom();
-            await joinGameRoom(globalRoom.roomId, user.uid, user.username);
-            router.push(`/room/${globalRoom.roomId}`);
+            const { quickPlay } = await import('@/utils/gameRoom');
+            const result = await quickPlay(user.uid, user.username);
+            
+            if (result.withBots) {
+                toast({
+                    title: 'Game starting with bots!',
+                    description: 'No available rooms found. Playing with AI opponents.',
+                    status: 'info',
+                    duration: 3000,
+                });
+            } else if (result.joined) {
+                toast({
+                    title: 'Joined a room!',
+                    description: 'Found an available game.',
+                    status: 'success',
+                    duration: 2000,
+                });
+            }
+            
+            router.push(`/room/${result.roomId}`);
         } catch (error) {
             toast({
-                title: 'Failed to join game',
+                title: 'Failed to start game',
                 description: error.message,
                 status: 'error',
                 duration: 3000,
@@ -421,7 +438,7 @@ const Lobby = () => {
                             <Input
                                 placeholder="ABC123"
                                 value={inviteCode}
-                                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                                onChange={(e) => setInviteCode(e.target.value)}
                                 bg="brandBlack.100"
                                 size="lg"
                                 textAlign="center"
