@@ -1,17 +1,13 @@
 import { Box, VStack, Tooltip, IconButton } from "@chakra-ui/react";
-import { SettingsIcon, QuestionIcon } from "@chakra-ui/icons";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { FaUsers, FaHeadset, FaTrophy, FaGamepad } from "react-icons/fa";
+import { FaTrophy, FaGamepad } from "react-icons/fa";
 
 const LeftNav = () => {
     const router = useRouter();
     const links = [
         { path: "/lobby", icon: FaGamepad, label: "Game Lobby" },
         { path: "/leaderboard", icon: FaTrophy, label: "Leaderboard" },
-        { path: "/", icon: QuestionIcon, label: "Help" },
-        { path: "/support", icon: FaHeadset, label: "Support" },
-        { path: "/profile", icon: SettingsIcon, label: "Settings" },
     ];
 
     return (
@@ -26,7 +22,7 @@ const LeftNav = () => {
                 <Link key={link.path} href={link.path}>
                     <Tooltip label={link.label} placement="right" hasArrow>
                         <IconButton
-                            icon={typeof link.icon === 'function' ? <link.icon /> : link.icon}
+                            icon={<link.icon />}
                             aria-label={link.label}
                             size="lg"
                             bg={router.route === link.path ? "brandBlack.200" : "glass"}
