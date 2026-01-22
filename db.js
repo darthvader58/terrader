@@ -17,14 +17,31 @@ let db;
 let auth;
 let googleProvider;
 
-try {
-    app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
-    db = getFirestore(app);
-    auth = getAuth(app);
-    googleProvider = new GoogleAuthProvider();
-} catch (error) {
-    console.error("Firebase initialization error:", error);
+// Initialize Firebase
+if (typeof window !== 'undefined') {
+    try {
+        app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
+        db = getFirestore(app);
+        auth = getAuth(app);
+        googleProvider = new GoogleAuthProvider();
+        console.log('Firebase initialized successfully');
+    } catch (error) {
+        console.error("Firebase initialization error:", error);
+    }
 }
 
-export { auth, googleProvider };
+// Helper function to get db instance
+export const getDb = () => {
+    if (!db && typeof window !== 'undefined') {
+        try {
+            app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
+            db = getFirestore(app);
+        } catch (error) {
+            console.error("Error getting Firestore instance:", error);
+        }
+    }
+    return db;
+};
+
+export { auth, googleProvider, db };
 export default db;

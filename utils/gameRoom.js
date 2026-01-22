@@ -15,7 +15,7 @@ import {
     increment,
     deleteDoc
 } from 'firebase/firestore';
-import db from '@/db';
+import db, { getDb } from '@/db';
 
 export const ROOM_STATUS = {
     WAITING: 'waiting',
@@ -255,7 +255,14 @@ export async function leaveGameRoom(roomId, userId) {
 export async function startGame(roomId) {
     try {
         console.log('Starting game for room:', roomId);
-        const roomRef = doc(db, 'gameRooms', roomId);
+        
+        const firestore = getDb();
+        
+        if (!firestore) {
+            throw new Error('Firestore instance not available');
+        }
+        
+        const roomRef = doc(firestore, 'gameRooms', roomId);
         
         await updateDoc(roomRef, {
             status: ROOM_STATUS.IN_PROGRESS,
@@ -533,16 +540,16 @@ export async function quickPlay(userId, username) {
         waitingForPlayers: true
     };
     
-    await setDoc(doc(db, 'gameRooms', roomId), roomData);
+    await setDoc(doc(getDb() || db, 'gameRooms', roomId), roomData);
     
     // Wait 5-10 seconds for other players to join
     setTimeout(async () => {
         try {
-            // Re-import db to ensure it's available in this context
-            const { getFirestore } = await import('firebase/firestore');
-            const { getApps } = await import('firebase/app');
-            const app = getApps()[0];
-            const firestore = getFirestore(app);
+            const firestore = getDb();
+            if (!firestore) {
+                console.error('Firestore not available in setTimeout');
+                return;
+            }
             
             const roomSnap = await getDoc(doc(firestore, 'gameRooms', roomId));
             if (roomSnap.exists() && roomSnap.data().status === ROOM_STATUS.WAITING) {
