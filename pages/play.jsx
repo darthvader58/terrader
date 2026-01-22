@@ -146,8 +146,11 @@ const Play = () => {
     
     // Penalize leaving game (page unload/reload)
     useEffect(() => {
+        let hasLeft = false;
+        
         const handleBeforeUnload = async (e) => {
-            if (user && roomId) {
+            if (user && roomId && !hasLeft && timeLeft > 0) {
+                hasLeft = true;
                 // Deduct 100 credits for leaving
                 try {
                     const { doc, updateDoc, increment } = await import('firebase/firestore');
@@ -156,21 +159,38 @@ const Play = () => {
                     await updateDoc(userRef, {
                         carbonCredits: increment(-100)
                     });
+                    console.log('Leave penalty applied: -100 credits');
                 } catch (error) {
                     console.error('Error deducting credits:', error);
                 }
             }
-            
-            e.preventDefault();
-            e.returnValue = '';
+        };
+        
+        const handleVisibilityChange = async () => {
+            if (document.visibilityState === 'hidden' && user && roomId && !hasLeft && timeLeft > 0) {
+                hasLeft = true;
+                try {
+                    const { doc, updateDoc, increment } = await import('firebase/firestore');
+                    const { db } = await import('@/db');
+                    const userRef = doc(db, 'users', user.uid);
+                    await updateDoc(userRef, {
+                        carbonCredits: increment(-100)
+                    });
+                    console.log('Leave penalty applied (visibility): -100 credits');
+                } catch (error) {
+                    console.error('Error deducting credits:', error);
+                }
+            }
         };
         
         window.addEventListener('beforeunload', handleBeforeUnload);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
         
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
-    }, [user, roomId]);
+    }, [user, roomId, timeLeft]);
 
     useEffect(() => {
         if (!roomId || !user) return;
@@ -256,6 +276,7 @@ const Play = () => {
                 await setDoc(gameResultRef, {
                     userId: user.uid,
                     roomId: roomId,
+                    roomType: roomData?.roomType || 'PUBLIC',
                     rank: myRank,
                     totalPlayers: totalPlayers,
                     carbonScore: carbonScore,
@@ -263,6 +284,13 @@ const Play = () => {
                     creditsEarned: creditsEarned,
                     playedAt: serverTimestamp(),
                     duration: GAME_CONFIG.GAME_DURATION,
+                });
+                
+                console.log('Game result saved to gameHistory:', {
+                    userId: user.uid,
+                    roomId: roomId,
+                    rank: myRank,
+                    creditsEarned: creditsEarned
                 });
                 
                 // Update user's total credits
@@ -737,9 +765,33 @@ const Play = () => {
                                     colorScheme="red"
                                     variant="outline"
                                     mt={2}
-                                    onClick={() => {
+                                    onClick={async () => {
                                         if (confirm('Leave game? You will lose 100 credits and your progress will not be saved.')) {
-                                            router.push('/dash');
+                                            try {
+                                                const { doc, updateDoc, increment } = await import('firebase/firestore');
+                                                const { db } = await import('@/db');
+                                                const userRef = doc(db, 'users', user.uid);
+                                                await updateDoc(userRef, {
+                                                    carbonCredits: increment(-100)
+                                                });
+                                                
+                                                // Refresh user data
+                                                if (refreshUserData) {
+                                                    await refreshUserData();
+                                                }
+                                                
+                                                toast({
+                                                    title: "Left game",
+                                                    description: "100 credits deducted",
+                                                    status: "warning",
+                                                    duration: 3000,
+                                                });
+                                                
+                                                router.push('/lobby');
+                                            } catch (error) {
+                                                console.error('Error leaving game:', error);
+                                                router.push('/lobby');
+                                            }
                                         }
                                     }}
                                 >

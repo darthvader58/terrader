@@ -127,10 +127,33 @@ const Profile = () => {
     const loadGameHistory = async () => {
         if (!user) return;
         try {
+            console.log('Loading game history for user:', user.uid);
             const history = await getUserGameHistory(user.uid, 10);
+            console.log('Game history loaded:', history);
             setGameHistory(history);
+            
+            if (history.length === 0) {
+                console.log('No game history found for user');
+            }
         } catch (error) {
             console.error('Failed to load game history:', error);
+            
+            // If it's an index error, show a helpful message
+            if (error.message && error.message.includes('index')) {
+                toast({
+                    title: 'Game history unavailable',
+                    description: 'Database index is being created. This may take a few minutes.',
+                    status: 'info',
+                    duration: 5000,
+                });
+            } else {
+                toast({
+                    title: 'Failed to load game history',
+                    description: error.message,
+                    status: 'error',
+                    duration: 3000,
+                });
+            }
         }
     };
 
@@ -368,17 +391,17 @@ const Profile = () => {
                                             </Thead>
                                             <Tbody>
                                                 {gameHistory.map((game, index) => (
-                                                    <Tr key={index}>
+                                                    <Tr key={game.id || index}>
                                                         <Td>
                                                             <Badge colorScheme={game.rank <= 3 ? "green" : "gray"}>
-                                                                #{game.rank}
+                                                                #{game.rank || '?'}
                                                             </Badge>
                                                         </Td>
-                                                        <Td>{game.totalPlayers}</Td>
-                                                        <Td color="green.400">{game.carbonScore}</Td>
-                                                        <Td>{game.creditsEarned}</Td>
+                                                        <Td>{game.totalPlayers || 0}</Td>
+                                                        <Td color="green.400">{game.carbonScore || 0}</Td>
+                                                        <Td>{game.creditsEarned || 0}</Td>
                                                         <Td>
-                                                            <Badge>{game.roomType}</Badge>
+                                                            <Badge>{game.roomType || 'PUBLIC'}</Badge>
                                                         </Td>
                                                     </Tr>
                                                 ))}

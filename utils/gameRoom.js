@@ -401,15 +401,48 @@ export async function saveGameHistory(userId, gameData) {
 }
 
 export async function getUserGameHistory(userId, limitCount = 10) {
-    const historyQuery = query(
-        collection(db, 'gameHistory'),
-        where('userId', '==', userId),
-        orderBy('playedAt', 'desc'),
-        limit(limitCount)
-    );
+    console.log('Fetching game history for userId:', userId);
     
-    const snapshot = await getDocs(historyQuery);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    try {
+        // Try with orderBy first (requires index)
+        const historyQuery = query(
+            collection(db, 'gameHistory'),
+            where('userId', '==', userId),
+            orderBy('playedAt', 'desc'),
+            limit(limitCount)
+        );
+        
+        const snapshot = await getDocs(historyQuery);
+        const games = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log('Game history fetched (with index):', games.length, 'games');
+        return games;
+    } catch (error) {
+        console.log('Index query failed, using fallback:', error.message);
+        
+        // If index doesn't exist, fall back to simple query without orderBy
+        try {
+            const simpleQuery = query(
+                collection(db, 'gameHistory'),
+                where('userId', '==', userId),
+                limit(limitCount)
+            );
+            
+            const snapshot = await getDocs(simpleQuery);
+            const games = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            console.log('Game history fetched (fallback):', games.length, 'games');
+            
+            // Sort in memory
+            return games.sort((a, b) => {
+                const aTime = a.playedAt?.toMillis?.() || 0;
+                const bTime = b.playedAt?.toMillis?.() || 0;
+                return bTime - aTime;
+            });
+        } catch (fallbackError) {
+            console.error('Fallback query also failed:', fallbackError);
+            throw fallbackError;
+        }
+    }
 }
 
 // Quick Play - Join random public room or create one with bots

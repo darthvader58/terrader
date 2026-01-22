@@ -22,12 +22,19 @@ const Nav = () => {
             mb={6}
         >
             <HStack spacing={4}>
-                <Image
-                    src="/assets/logo.svg"
-                    width={80}
-                    height={80}
-                    alt="Logo"
-                />
+                <Box 
+                    cursor="pointer" 
+                    onClick={() => router.push('/')}
+                    _hover={{ opacity: 0.8 }}
+                    transition="opacity 0.2s"
+                >
+                    <Image
+                        src="/assets/logo.svg"
+                        width={80}
+                        height={80}
+                        alt="Logo"
+                    />
+                </Box>
                 <Text
                     fontSize={{ base: "3xl", md: "5xl", lg: "6xl" }}
                     fontWeight="900"
@@ -36,6 +43,10 @@ const Nav = () => {
                         "-webkit-text-stroke-color": "white",
                         color: "rgba(0, 0, 0, 0)",
                     }}
+                    cursor="pointer"
+                    onClick={() => router.push('/')}
+                    _hover={{ opacity: 0.8 }}
+                    transition="opacity 0.2s"
                 >
                     terrader
                 </Text>
@@ -62,8 +73,14 @@ const Nav = () => {
                                     Level {user?.level || 1}
                                 </Badge>
                                 <HStack spacing={2} mt={1}>
+                                    <ChakraImage
+                                        src="/assets/carbon_credits.svg"
+                                        alt="Credits"
+                                        w="20px"
+                                        h="20px"
+                                    />
                                     <Text fontSize="md" fontWeight="medium">
-                                        {user?.carbonCredits || 0} Credits
+                                        {user?.carbonCredits || 0}
                                     </Text>
                                     <IconButton
                                         icon={<AddIcon />}
