@@ -457,59 +457,130 @@ const Play = () => {
         return () => clearInterval(newsInterval);
     }, [fetchNews]);
     
-    // Bot trading activity - more frequent and competitive with score updates
+    // Bot trading activity - Advanced AI with portfolio management
     useEffect(() => {
         if (!roomId || !roomData || !roomData.players) return;
         
         const botPlayers = Object.values(roomData.players).filter(p => p.isBot);
         if (botPlayers.length === 0) return;
         
+        // Initialize bot portfolios
+        const botPortfolios = {};
+        botPlayers.forEach(bot => {
+            if (!botPortfolios[bot.userId]) {
+                botPortfolios[bot.userId] = {
+                    balance: GAME_CONFIG.INITIAL_BALANCE,
+                    holdings: {},
+                    carbonScore: 0,
+                    trades: []
+                };
+            }
+        });
+        
         const botTradingInterval = setInterval(async () => {
-            // Multiple bots can trade at once
-            const numBotsTrading = Math.min(botPlayers.length, Math.floor(Math.random() * 2) + 1);
+            // More bots trade at once for competitive gameplay
+            const numBotsTrading = Math.min(botPlayers.length, Math.floor(Math.random() * 4) + 2); // 2-5 bots trade
             
             for (let i = 0; i < numBotsTrading; i++) {
                 const bot = botPlayers[Math.floor(Math.random() * botPlayers.length)];
-                const randomCoin = CRYPTO_COINS[Math.floor(Math.random() * CRYPTO_COINS.length)];
-                const currentPrice = prices[randomCoin.id]?.current || 50;
-                const priceChange = prices[randomCoin.id]?.change || 0;
-                const trend = marketTrends[randomCoin.id] || 0;
+                const botPortfolio = botPortfolios[bot.userId];
                 
-                const botTrade = generateBotTrade(randomCoin.id, currentPrice, trend, priceChange);
+                if (!botPortfolio) continue;
+                
+                // Select coin strategically (prefer coins with strong trends)
+                let selectedCoin;
+                const trendScores = CRYPTO_COINS.map(coin => ({
+                    coin,
+                    score: Math.abs(marketTrends[coin.id] || 0) + Math.abs(prices[coin.id]?.change || 0) / 10
+                }));
+                
+                // 70% chance to pick high-trend coin, 30% random
+                if (Math.random() < 0.7) {
+                    trendScores.sort((a, b) => b.score - a.score);
+                    selectedCoin = trendScores[0].coin;
+                } else {
+                    selectedCoin = CRYPTO_COINS[Math.floor(Math.random() * CRYPTO_COINS.length)];
+                }
+                
+                const currentPrice = prices[selectedCoin.id]?.current || 50;
+                const priceChange = prices[selectedCoin.id]?.change || 0;
+                const trend = marketTrends[selectedCoin.id] || 0;
+                
+                // Generate advanced bot trade with portfolio context
+                const botTrade = generateBotTrade(
+                    selectedCoin.id, 
+                    currentPrice, 
+                    trend, 
+                    priceChange,
+                    botPortfolio.carbonScore,
+                    botPortfolio.balance,
+                    botPortfolio.holdings
+                );
+                
+                if (!botTrade) continue; // Bot decided not to trade
+                
+                // Update bot portfolio
+                if (botTrade.type === 'buy') {
+                    const cost = botTrade.quantity * botTrade.price;
+                    if (cost <= botPortfolio.balance) {
+                        botPortfolio.balance -= cost;
+                        if (!botPortfolio.holdings[selectedCoin.id]) {
+                            botPortfolio.holdings[selectedCoin.id] = { quantity: 0, avgPrice: 0 };
+                        }
+                        const holding = botPortfolio.holdings[selectedCoin.id];
+                        const totalCost = (holding.quantity * holding.avgPrice) + cost;
+                        holding.quantity += botTrade.quantity;
+                        holding.avgPrice = totalCost / holding.quantity;
+                    } else {
+                        continue; // Can't afford
+                    }
+                } else {
+                    const holding = botPortfolio.holdings[selectedCoin.id];
+                    if (!holding || holding.quantity < botTrade.quantity) {
+                        continue; // Can't sell
+                    }
+                    const revenue = botTrade.quantity * botTrade.price;
+                    botPortfolio.balance += revenue;
+                    holding.quantity -= botTrade.quantity;
+                }
                 
                 // Calculate carbon score for bot trade
                 const botScoreChange = calculateCarbonScore(botTrade);
                 
+                // Apply carbon footprint penalty
+                botPortfolio.trades.push(botTrade);
+                const botFootprint = calculateCarbonFootprint(botPortfolio.trades, botPortfolio.holdings);
+                const footprintPenalty = calculateCarbonScorePenalty(botFootprint);
+                
+                botPortfolio.carbonScore += botScoreChange + footprintPenalty;
+                
                 // Update bot's score in Firestore
-                if (roomData.leaderboard && roomData.leaderboard[bot.userId]) {
-                    const currentBotScore = roomData.leaderboard[bot.userId].carbonScore || 0;
-                    await updatePlayerScore(
-                        roomId, 
-                        bot.userId, 
-                        currentBotScore + botScoreChange,
-                        0, // Bots don't track profit
-                        {} // Bots don't track portfolio
-                    );
-                }
+                await updatePlayerScore(
+                    roomId, 
+                    bot.userId, 
+                    botPortfolio.carbonScore,
+                    0, // Bots don't display profit
+                    {}
+                );
                 
                 // Add to recent trades
                 setRecentTrades(prev => ({
                     ...prev,
-                    [randomCoin.id]: [botTrade, ...(prev[randomCoin.id] || [])].slice(0, 20)
+                    [selectedCoin.id]: [botTrade, ...(prev[selectedCoin.id] || [])].slice(0, 20)
                 }));
                 
                 // Update trading volume
                 setTradingVolumes(prev => ({
                     ...prev,
-                    [randomCoin.id]: (prev[randomCoin.id] || 0) + (botTrade.quantity * botTrade.price)
+                    [selectedCoin.id]: (prev[selectedCoin.id] || 0) + (botTrade.quantity * botTrade.price)
                 }));
                 
                 // Update market stats
                 setMarketStats(prev => {
-                    const coinStats = prev[randomCoin.id] || { volume24h: 0, trades24h: 0, buyPressure: 50, volatility: 0 };
+                    const coinStats = prev[selectedCoin.id] || { volume24h: 0, trades24h: 0, buyPressure: 50, volatility: 0 };
                     return {
                         ...prev,
-                        [randomCoin.id]: {
+                        [selectedCoin.id]: {
                             ...coinStats,
                             volume24h: coinStats.volume24h + (botTrade.quantity * botTrade.price),
                             trades24h: coinStats.trades24h + 1,
@@ -520,7 +591,7 @@ const Play = () => {
                     };
                 });
             }
-        }, 2000 + Math.random() * 2000); // Bot trades every 2-4 seconds
+        }, 1500 + Math.random() * 1500); // Bot trades every 1.5-3 seconds (more frequent)
         
         return () => clearInterval(botTradingInterval);
     }, [roomId, roomData, prices, marketTrends]);

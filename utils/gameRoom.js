@@ -473,8 +473,13 @@ export async function quickPlay(userId, username) {
     // No available rooms, create one with bots
     const roomId = `quick_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // Generate bot players
-    const botNames = ['EcoBot', 'GreenAI', 'TerraBot', 'CarbonZero', 'NatureAI'];
+    // Generate bot names
+    const botNames = [
+        'EcoBot', 'GreenAI', 'TerraBot', 'CarbonZero', 'NatureAI',
+        'EcoTrader', 'GreenMind', 'TerraMax', 'CarbonPro', 'NatureBot',
+        'EcoMaster', 'GreenGenius', 'TerraPro', 'CarbonElite', 'NaturePro'
+    ];
+    
     const players = {
         [userId]: {
             userId,
@@ -486,13 +491,13 @@ export async function quickPlay(userId, username) {
         }
     };
     
-    // Add 3-5 bots
-    const numBots = Math.floor(Math.random() * 3) + 3; // 3-5 bots
+    // Add 10-15 bots initially (will be competitive)
+    const numBots = Math.floor(Math.random() * 6) + 10; // 10-15 bots
     for (let i = 0; i < numBots; i++) {
         const botId = `bot_${i}_${Date.now()}`;
         players[botId] = {
             userId: botId,
-            username: botNames[i % botNames.length] + (i > 4 ? ` ${Math.floor(i/5) + 1}` : ''),
+            username: botNames[i % botNames.length] + (i >= botNames.length ? ` ${Math.floor(i/botNames.length) + 1}` : ''),
             joinedAt: Date.now(),
             ready: true,
             isHost: false,
@@ -500,12 +505,14 @@ export async function quickPlay(userId, username) {
         };
     }
     
+    const waitTime = 5000 + Math.random() * 5000; // 5-10 seconds wait
+    
     const roomData = {
         roomId,
         hostUserId: userId,
         hostUsername: username,
         roomType: ROOM_TYPES.PUBLIC,
-        maxPlayers: 10,
+        maxPlayers: 20, // Increased to accommodate more players
         currentPlayers: Object.keys(players).length,
         status: ROOM_STATUS.WAITING,
         players,
@@ -514,20 +521,27 @@ export async function quickPlay(userId, username) {
         endTime: null,
         createdAt: serverTimestamp(),
         hasBots: true,
-        autoStartTimer: Date.now() + 5000 // Auto-start in 5 seconds
+        autoStartTimer: Date.now() + waitTime,
+        waitingForPlayers: true
     };
     
     await setDoc(doc(db, 'gameRooms', roomId), roomData);
     
-    // Auto-start the game after 5 seconds
+    // Wait 5-10 seconds for other players to join
     setTimeout(async () => {
         const roomSnap = await getDoc(doc(db, 'gameRooms', roomId));
         if (roomSnap.exists() && roomSnap.data().status === ROOM_STATUS.WAITING) {
+            // Update room to indicate waiting is over
+            await updateDoc(doc(db, 'gameRooms', roomId), {
+                waitingForPlayers: false
+            });
+            
+            // Start the game
             await startGame(roomId);
         }
-    }, 5000);
+    }, waitTime);
     
-    return { roomId, joined: false, withBots: true };
+    return { roomId, joined: false, withBots: true, waitTime: Math.floor(waitTime / 1000) };
 }
 
 // Clean up old finished rooms (call this periodically)

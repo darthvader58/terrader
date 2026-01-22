@@ -265,10 +265,10 @@ const Lobby = () => {
             
             if (result.withBots) {
                 toast({
-                    title: 'Game starting with bots!',
-                    description: '50 credits deducted. Playing with AI opponents.',
+                    title: 'Game starting soon!',
+                    description: `Waiting ${result.waitTime || 5} seconds for other players to join...`,
                     status: 'info',
-                    duration: 3000,
+                    duration: 5000,
                 });
             } else if (result.joined) {
                 toast({

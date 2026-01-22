@@ -125,57 +125,142 @@ export function generatePriceMovement(currentPrice, newsImpact = 0, marketTrend 
     return Math.max(10, Math.min(200, Number(newPrice.toFixed(2))));
 }
 
-export function generateBotTrade(coinId, currentPrice, marketTrend, priceChange = 0) {
-    // Bots make smarter decisions based on multiple factors
+export function generateBotTrade(coinId, currentPrice, marketTrend, priceChange = 0, carbonScore = 0, balance = 500, holdings = {}) {
+    // Advanced bot decision-making system
+    // Bots aim to maximize carbon score while managing risk
+    
+    let tradeScore = 0; // Score to determine if we should trade
     let buyProbability = 0.5; // Start neutral
     
-    // Strong bullish trend increases buy probability
-    if (marketTrend > 0.3) {
-        buyProbability = 0.85; // 85% chance to buy
-    } else if (marketTrend > 0.1) {
-        buyProbability = 0.70; // 70% chance to buy
-    } else if (marketTrend < -0.3) {
-        buyProbability = 0.15; // 15% chance to buy (sell more)
-    } else if (marketTrend < -0.1) {
-        buyProbability = 0.30; // 30% chance to buy
+    // 1. MARKET TREND ANALYSIS (40% weight)
+    if (marketTrend > 0.4) {
+        buyProbability = 0.90; // Very bullish - strong buy
+        tradeScore += 40;
+    } else if (marketTrend > 0.2) {
+        buyProbability = 0.75; // Bullish - buy
+        tradeScore += 30;
+    } else if (marketTrend > 0) {
+        buyProbability = 0.60; // Slightly bullish
+        tradeScore += 15;
+    } else if (marketTrend < -0.4) {
+        buyProbability = 0.10; // Very bearish - strong sell
+        tradeScore += 40;
+    } else if (marketTrend < -0.2) {
+        buyProbability = 0.25; // Bearish - sell
+        tradeScore += 30;
+    } else if (marketTrend < 0) {
+        buyProbability = 0.40; // Slightly bearish
+        tradeScore += 15;
     }
     
-    // Recent price increase = more likely to buy (momentum trading)
-    if (priceChange > 5) {
-        buyProbability += 0.15;
-    } else if (priceChange < -5) {
+    // 2. MOMENTUM TRADING (30% weight)
+    if (priceChange > 8) {
+        buyProbability += 0.20; // Strong upward momentum
+        tradeScore += 30;
+    } else if (priceChange > 4) {
+        buyProbability += 0.12; // Moderate upward momentum
+        tradeScore += 20;
+    } else if (priceChange < -8) {
+        buyProbability -= 0.20; // Strong downward momentum
+        tradeScore += 30;
+    } else if (priceChange < -4) {
+        buyProbability -= 0.12; // Moderate downward momentum
+        tradeScore += 20;
+    }
+    
+    // 3. PRICE LEVEL STRATEGY (20% weight)
+    if (currentPrice < 35) {
+        buyProbability += 0.15; // Cheap - buy opportunity
+        tradeScore += 20;
+    } else if (currentPrice < 50) {
+        buyProbability += 0.08;
+        tradeScore += 10;
+    } else if (currentPrice > 90) {
+        buyProbability -= 0.15; // Expensive - sell opportunity
+        tradeScore += 20;
+    } else if (currentPrice > 75) {
+        buyProbability -= 0.08;
+        tradeScore += 10;
+    }
+    
+    // 4. CARBON SCORE OPTIMIZATION (10% weight)
+    // Bots prioritize selling to increase carbon score
+    if (carbonScore < 50) {
+        // Low carbon score - prioritize selling
+        buyProbability -= 0.10;
+        tradeScore += 10;
+    } else if (carbonScore > 150) {
+        // High carbon score - can afford to buy
+        buyProbability += 0.05;
+    }
+    
+    // 5. PORTFOLIO MANAGEMENT
+    const currentHolding = holdings[coinId]?.quantity || 0;
+    const portfolioValue = balance + (currentHolding * currentPrice);
+    
+    // Don't buy if low on balance
+    if (balance < portfolioValue * 0.2) {
         buyProbability -= 0.15;
     }
     
-    // Price level affects decision (buy low, sell high)
-    if (currentPrice < 40) {
-        buyProbability += 0.10; // Cheaper = more likely to buy
-    } else if (currentPrice > 80) {
-        buyProbability -= 0.10; // Expensive = less likely to buy
+    // Sell if holding too much of one coin
+    if (currentHolding * currentPrice > portfolioValue * 0.4) {
+        buyProbability -= 0.20;
     }
     
-    // Clamp between 0 and 1
+    // Clamp probability
     buyProbability = Math.max(0, Math.min(1, buyProbability));
     
+    // Decide trade type
     const shouldBuy = Math.random() < buyProbability;
     
-    // Smarter quantity based on price and decision confidence
-    let baseQuantity = 5;
-    if (currentPrice < 30) {
-        baseQuantity = 10; // Buy more of cheap coins
-    } else if (currentPrice > 80) {
-        baseQuantity = 3; // Buy less of expensive coins
+    // Only trade if score is high enough (bots are selective)
+    if (tradeScore < 15 && Math.random() > 0.3) {
+        // Skip this trade opportunity (30% chance to skip low-score trades)
+        return null;
     }
     
-    const quantity = (Math.random() * baseQuantity + 2).toFixed(3); // 2-12 units with 3 decimals
+    // SMART QUANTITY CALCULATION
+    let quantity;
+    
+    if (shouldBuy) {
+        // Calculate optimal buy quantity
+        const maxAffordable = balance / currentPrice;
+        const targetInvestment = balance * 0.15; // Invest 15% of balance
+        const targetQuantity = targetInvestment / currentPrice;
+        
+        // Adjust based on confidence
+        const confidence = Math.abs(marketTrend) + (Math.abs(priceChange) / 10);
+        const adjustedQuantity = targetQuantity * (0.5 + confidence);
+        
+        quantity = Math.min(adjustedQuantity, maxAffordable * 0.8); // Max 80% of affordable
+        quantity = Math.max(0.5, quantity); // Minimum 0.5 units
+    } else {
+        // Calculate optimal sell quantity
+        const availableToSell = currentHolding;
+        if (availableToSell < 0.1) {
+            return null; // Nothing to sell
+        }
+        
+        // Sell 20-60% of holdings based on confidence
+        const confidence = Math.abs(marketTrend) + (Math.abs(priceChange) / 10);
+        const sellPercentage = 0.2 + (confidence * 0.4);
+        
+        quantity = availableToSell * sellPercentage;
+        quantity = Math.max(0.5, Math.min(quantity, availableToSell));
+    }
+    
+    // Round to 3 decimals
+    quantity = parseFloat(quantity.toFixed(3));
     
     return {
         type: shouldBuy ? 'buy' : 'sell',
         coin: coinId,
-        quantity: parseFloat(quantity),
+        quantity: quantity,
         price: currentPrice,
         timestamp: Date.now(),
-        isBot: true
+        isBot: true,
+        confidence: tradeScore
     };
 }
 
