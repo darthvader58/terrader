@@ -1,6 +1,6 @@
 import { Box, Flex, Text, HStack, VStack, IconButton, Badge, Button, Menu, MenuButton, MenuList, MenuItem, MenuDivider, Image as ChakraImage } from "@chakra-ui/react";
 import { AddIcon, SettingsIcon } from "@chakra-ui/icons";
-import { FaUser, FaQuestionCircle, FaSignOutAlt } from "react-icons/fa";
+import { FaUser, FaSignOutAlt } from "react-icons/fa";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
@@ -53,15 +53,6 @@ const Nav = () => {
             </HStack>
 
             <HStack spacing={4}>
-                <IconButton
-                    icon={<FaQuestionCircle />}
-                    aria-label="Support"
-                    variant="ghost"
-                    colorScheme="green"
-                    size="lg"
-                    onClick={() => router.push('/support')}
-                />
-                
                 <Menu>
                     <MenuButton>
                         <HStack spacing={3} cursor="pointer" _hover={{ opacity: 0.8 }}>

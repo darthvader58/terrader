@@ -1,13 +1,15 @@
 import { Box, VStack, Tooltip, IconButton } from "@chakra-ui/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { FaTrophy, FaGamepad } from "react-icons/fa";
+import { FaTrophy, FaGamepad, FaHeadset, FaQuestionCircle } from "react-icons/fa";
 
 const LeftNav = () => {
     const router = useRouter();
     const links = [
         { path: "/lobby", icon: FaGamepad, label: "Game Lobby" },
         { path: "/leaderboard", icon: FaTrophy, label: "Leaderboard" },
+        { path: "/support", icon: FaHeadset, label: "Support" },
+        { path: "/help", icon: FaQuestionCircle, label: "Help & Rules" },
     ];
 
     return (
@@ -32,6 +34,9 @@ const LeftNav = () => {
                                 transform: "scale(1.1)"
                             }}
                             transition="all 0.2s"
+                            backdropFilter="blur(10px)"
+                            borderWidth={1}
+                            borderColor="whiteAlpha.200"
                         />
                     </Tooltip>
                 </Link>
