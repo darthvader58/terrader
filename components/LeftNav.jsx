@@ -1,7 +1,7 @@
 import { Box, VStack, Tooltip, IconButton } from "@chakra-ui/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { FaTrophy, FaGamepad, FaHeadset, FaQuestionCircle } from "react-icons/fa";
+import { FaTrophy, FaGamepad, FaHeadset, FaQuestionCircle, FaCog } from "react-icons/fa";
 
 const LeftNav = () => {
     const router = useRouter();
@@ -10,6 +10,7 @@ const LeftNav = () => {
         { path: "/leaderboard", icon: FaTrophy, label: "Leaderboard" },
         { path: "/support", icon: FaHeadset, label: "Support" },
         { path: "/help", icon: FaQuestionCircle, label: "Help & Rules" },
+        { path: "/settings", icon: FaCog, label: "Settings" },
     ];
 
     return (

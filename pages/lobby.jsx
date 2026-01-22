@@ -93,8 +93,34 @@ const Lobby = () => {
     const handleCreateRoom = async () => {
         if (!user) return;
         
+        // Check if user has enough credits for non-private rooms (50 credit entry fee)
+        if (roomType !== 'PRIVATE' && user.carbonCredits < 50) {
+            toast({
+                title: 'Insufficient credits',
+                description: 'You need 50 credits to create a public/global room.',
+                status: 'error',
+                duration: 4000,
+            });
+            return;
+        }
+        
         setCreating(true);
         try {
+            // Deduct 50 credits for non-private rooms
+            if (roomType !== 'PRIVATE') {
+                const { doc, updateDoc, increment } = await import('firebase/firestore');
+                const { db } = await import('@/db');
+                const userRef = doc(db, 'users', user.uid);
+                await updateDoc(userRef, {
+                    carbonCredits: increment(-50)
+                });
+                
+                // Refresh user data
+                if (refreshUserData) {
+                    await refreshUserData();
+                }
+            }
+            
             const { roomId, inviteCode: code } = await createGameRoom(
                 user.uid,
                 user.username,
@@ -116,7 +142,7 @@ const Lobby = () => {
             } else {
                 toast({
                     title: 'Room created!',
-                    description: 'Waiting for players to join...',
+                    description: '50 credits deducted. Waiting for players...',
                     status: 'success',
                     duration: 3000,
                 });
@@ -139,8 +165,40 @@ const Lobby = () => {
     const handleJoinRoom = async (roomId) => {
         if (!user) return;
         
+        // Check if user has enough credits (50 credit entry fee)
+        if (user.carbonCredits < 50) {
+            toast({
+                title: 'Insufficient credits',
+                description: 'You need 50 credits to join a game. Play more to earn credits!',
+                status: 'error',
+                duration: 4000,
+            });
+            return;
+        }
+        
         try {
+            // Deduct 50 credits for entry
+            const { doc, updateDoc, increment } = await import('firebase/firestore');
+            const { db } = await import('@/db');
+            const userRef = doc(db, 'users', user.uid);
+            await updateDoc(userRef, {
+                carbonCredits: increment(-50)
+            });
+            
+            // Refresh user data
+            if (refreshUserData) {
+                await refreshUserData();
+            }
+            
             await joinGameRoom(roomId, user.uid, user.username);
+            
+            toast({
+                title: 'Joined game!',
+                description: '50 credits deducted as entry fee',
+                status: 'success',
+                duration: 2000,
+            });
+            
             router.push(`/room/${roomId}`);
         } catch (error) {
             toast({
@@ -177,21 +235,45 @@ const Lobby = () => {
     const handleQuickPlay = async () => {
         if (!user) return;
         
+        // Check if user has enough credits (50 credit entry fee)
+        if (user.carbonCredits < 50) {
+            toast({
+                title: 'Insufficient credits',
+                description: 'You need 50 credits to play. Complete games to earn credits!',
+                status: 'error',
+                duration: 4000,
+            });
+            return;
+        }
+        
         try {
+            // Deduct 50 credits for entry
+            const { doc, updateDoc, increment } = await import('firebase/firestore');
+            const { db } = await import('@/db');
+            const userRef = doc(db, 'users', user.uid);
+            await updateDoc(userRef, {
+                carbonCredits: increment(-50)
+            });
+            
+            // Refresh user data
+            if (refreshUserData) {
+                await refreshUserData();
+            }
+            
             const { quickPlay } = await import('@/utils/gameRoom');
             const result = await quickPlay(user.uid, user.username);
             
             if (result.withBots) {
                 toast({
                     title: 'Game starting with bots!',
-                    description: 'No available rooms found. Playing with AI opponents.',
+                    description: '50 credits deducted. Playing with AI opponents.',
                     status: 'info',
                     duration: 3000,
                 });
             } else if (result.joined) {
                 toast({
                     title: 'Joined a room!',
-                    description: 'Found an available game.',
+                    description: '50 credits deducted as entry fee.',
                     status: 'success',
                     duration: 2000,
                 });

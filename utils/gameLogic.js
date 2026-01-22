@@ -252,6 +252,8 @@ export function calculateCarbonScorePenalty(carbonFootprint) {
 }
 
 export function calculateCreditsEarned(rank, totalPlayers, carbonScore, profit) {
+    console.log('Calculating credits:', { rank, totalPlayers, carbonScore, profit });
+    
     // Base credits based on rank
     let credits = 0;
     
@@ -267,16 +269,29 @@ export function calculateCreditsEarned(rank, totalPlayers, carbonScore, profit) 
         credits = 10; // Bottom half
     }
     
+    console.log('Base credits:', credits);
+    
     // Bonus for positive carbon score (max +50)
+    let carbonBonus = 0;
     if (carbonScore > 0) {
-        credits += Math.min(50, Math.floor(carbonScore / 10));
+        carbonBonus = Math.min(50, Math.floor(carbonScore / 10));
+        credits += carbonBonus;
     }
+    
+    console.log('Carbon bonus:', carbonBonus, 'Total after carbon:', credits);
     
     // Bonus for profit (max +50)
+    let profitBonus = 0;
     if (profit > 0) {
-        credits += Math.min(50, Math.floor(profit / 10));
+        profitBonus = Math.min(50, Math.floor(profit / 10));
+        credits += profitBonus;
     }
     
+    console.log('Profit bonus:', profitBonus, 'Total after profit:', credits);
+    
     // Minimum 10 credits for participation
-    return Math.max(10, credits);
+    const finalCredits = Math.max(10, credits);
+    console.log('Final credits earned:', finalCredits);
+    
+    return finalCredits;
 }

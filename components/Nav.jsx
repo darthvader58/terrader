@@ -53,73 +53,69 @@ const Nav = () => {
             </HStack>
 
             <HStack spacing={4}>
+                <VStack align="flex-end" spacing={1}>
+                    <Text fontWeight="bold" fontSize="lg">
+                        {user?.username || 'Player'}
+                    </Text>
+                    <Badge colorScheme="green" fontSize="sm" px={2}>
+                        Level {user?.level || 1}
+                    </Badge>
+                    <HStack spacing={2} mt={1}>
+                        <ChakraImage
+                            src="/assets/carbon_credits.svg"
+                            alt="Credits"
+                            w="20px"
+                            h="20px"
+                        />
+                        <Text fontSize="md" fontWeight="medium">
+                            {user?.carbonCredits || 0}
+                        </Text>
+                        <IconButton
+                            icon={<AddIcon />}
+                            size="xs"
+                            colorScheme="green"
+                            variant="ghost"
+                            aria-label="Add credits"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                router.push('/profile');
+                            }}
+                        />
+                    </HStack>
+                </VStack>
+                <Box
+                    borderRadius="full"
+                    overflow="hidden"
+                    border="2px solid"
+                    borderColor="green.400"
+                    w="70px"
+                    h="70px"
+                    cursor="pointer"
+                    onClick={() => router.push('/profile')}
+                    _hover={{ 
+                        borderColor: "green.300",
+                        transform: "scale(1.05)"
+                    }}
+                    transition="all 0.2s"
+                >
+                    <ChakraImage
+                        src={user?.photoURL || "/assets/avatar.svg"}
+                        alt="avatar"
+                        w="70px"
+                        h="70px"
+                        objectFit="cover"
+                    />
+                </Box>
+                
                 <Menu>
-                    <MenuButton>
-                        <HStack spacing={3} cursor="pointer" _hover={{ opacity: 0.8 }}>
-                            <VStack align="flex-end" spacing={1}>
-                                <Text fontWeight="bold" fontSize="lg">
-                                    {user?.username || 'Player'}
-                                </Text>
-                                <Badge colorScheme="green" fontSize="sm" px={2}>
-                                    Level {user?.level || 1}
-                                </Badge>
-                                <HStack spacing={2} mt={1}>
-                                    <ChakraImage
-                                        src="/assets/carbon_credits.svg"
-                                        alt="Credits"
-                                        w="20px"
-                                        h="20px"
-                                    />
-                                    <Text fontSize="md" fontWeight="medium">
-                                        {user?.carbonCredits || 0}
-                                    </Text>
-                                    <IconButton
-                                        icon={<AddIcon />}
-                                        size="xs"
-                                        colorScheme="green"
-                                        variant="ghost"
-                                        aria-label="Add credits"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            router.push('/profile');
-                                        }}
-                                    />
-                                </HStack>
-                            </VStack>
-                            <Box
-                                borderRadius="full"
-                                overflow="hidden"
-                                border="2px solid"
-                                borderColor="green.400"
-                                w="70px"
-                                h="70px"
-                            >
-                                <ChakraImage
-                                    src={user?.photoURL || "/assets/avatar.svg"}
-                                    alt="avatar"
-                                    w="70px"
-                                    h="70px"
-                                    objectFit="cover"
-                                />
-                            </Box>
-                        </HStack>
-                    </MenuButton>
+                    <MenuButton
+                        as={IconButton}
+                        icon={<SettingsIcon />}
+                        variant="ghost"
+                        colorScheme="gray"
+                        aria-label="Menu"
+                    />
                     <MenuList bg="brandBlack.200" borderColor="green.400">
-                        <MenuItem 
-                            icon={<FaUser />} 
-                            onClick={() => router.push('/profile')}
-                            _hover={{ bg: "brandBlack.100" }}
-                        >
-                            Profile
-                        </MenuItem>
-                        <MenuItem 
-                            icon={<SettingsIcon />} 
-                            onClick={() => router.push('/settings')}
-                            _hover={{ bg: "brandBlack.100" }}
-                        >
-                            Settings
-                        </MenuItem>
-                        <MenuDivider />
                         <MenuItem 
                             icon={<FaSignOutAlt />} 
                             onClick={handleLogout}
