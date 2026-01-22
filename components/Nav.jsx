@@ -75,10 +75,10 @@ const Nav = () => {
                             size="xs"
                             colorScheme="green"
                             variant="ghost"
-                            aria-label="Add credits"
+                            aria-label="Buy credits"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                router.push('/profile');
+                                router.push('/buy-credits');
                             }}
                         />
                     </HStack>
@@ -110,10 +110,10 @@ const Nav = () => {
                 <Menu>
                     <MenuButton
                         as={IconButton}
-                        icon={<SettingsIcon />}
+                        icon={<FaSignOutAlt />}
                         variant="ghost"
-                        colorScheme="gray"
-                        aria-label="Menu"
+                        colorScheme="red"
+                        aria-label="Logout"
                     />
                     <MenuList bg="brandBlack.200" borderColor="green.400">
                         <MenuItem 

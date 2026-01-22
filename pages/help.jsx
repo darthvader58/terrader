@@ -250,6 +250,178 @@ const Help = () => {
                                 <Divider />
 
                                 <Box>
+                                    <Heading size="lg" mb={4} color="green.400">How to Join/Create Game Lobbies</Heading>
+                                    <VStack spacing={4} align="stretch">
+                                        <Box>
+                                            <Text fontWeight="bold" mb={2} color="white" fontSize="md">Quick Play</Text>
+                                            <List spacing={2}>
+                                                <ListItem display="flex" alignItems="flex-start">
+                                                    <ListIcon as={InfoIcon} color="blue.400" mt={1} />
+                                                    <Text color="gray.300" fontSize="sm">
+                                                        Click "Quick Play" button in the lobby
+                                                    </Text>
+                                                </ListItem>
+                                                <ListItem display="flex" alignItems="flex-start">
+                                                    <ListIcon as={InfoIcon} color="blue.400" mt={1} />
+                                                    <Text color="gray.300" fontSize="sm">
+                                                        Automatically joins an available public room or creates one with bots
+                                                    </Text>
+                                                </ListItem>
+                                                <ListItem display="flex" alignItems="flex-start">
+                                                    <ListIcon as={WarningIcon} color="orange.400" mt={1} />
+                                                    <Text color="gray.300" fontSize="sm">
+                                                        <Text as="span" fontWeight="bold">Entry Fee:</Text> 50 carbon credits
+                                                    </Text>
+                                                </ListItem>
+                                                <ListItem display="flex" alignItems="flex-start">
+                                                    <ListIcon as={CheckCircleIcon} color="green.400" mt={1} />
+                                                    <Text color="gray.300" fontSize="sm">
+                                                        <Text as="span" fontWeight="bold">Requirement:</Text> Minimum 50 credits in your account
+                                                    </Text>
+                                                </ListItem>
+                                            </List>
+                                        </Box>
+
+                                        <Box>
+                                            <Text fontWeight="bold" mb={2} color="white" fontSize="md">Join Existing Room</Text>
+                                            <List spacing={2}>
+                                                <ListItem display="flex" alignItems="flex-start">
+                                                    <ListIcon as={InfoIcon} color="blue.400" mt={1} />
+                                                    <Text color="gray.300" fontSize="sm">
+                                                        Browse available rooms in the lobby (Public and Global tabs)
+                                                    </Text>
+                                                </ListItem>
+                                                <ListItem display="flex" alignItems="flex-start">
+                                                    <ListIcon as={InfoIcon} color="blue.400" mt={1} />
+                                                    <Text color="gray.300" fontSize="sm">
+                                                        Click "Join" button on any room that's not full
+                                                    </Text>
+                                                </ListItem>
+                                                <ListItem display="flex" alignItems="flex-start">
+                                                    <ListIcon as={WarningIcon} color="orange.400" mt={1} />
+                                                    <Text color="gray.300" fontSize="sm">
+                                                        <Text as="span" fontWeight="bold">Entry Fee:</Text> 50 carbon credits (for Public/Global rooms)
+                                                    </Text>
+                                                </ListItem>
+                                                <ListItem display="flex" alignItems="flex-start">
+                                                    <ListIcon as={CheckCircleIcon} color="green.400" mt={1} />
+                                                    <Text color="gray.300" fontSize="sm">
+                                                        <Text as="span" fontWeight="bold">Requirement:</Text> Minimum 50 credits in your account
+                                                    </Text>
+                                                </ListItem>
+                                            </List>
+                                        </Box>
+
+                                        <Box>
+                                            <Text fontWeight="bold" mb={2} color="white" fontSize="md">Create New Room</Text>
+                                            <List spacing={2}>
+                                                <ListItem display="flex" alignItems="flex-start">
+                                                    <ListIcon as={InfoIcon} color="blue.400" mt={1} />
+                                                    <Text color="gray.300" fontSize="sm">
+                                                        Click "Create Room" button in the lobby
+                                                    </Text>
+                                                </ListItem>
+                                                <ListItem display="flex" alignItems="flex-start">
+                                                    <ListIcon as={InfoIcon} color="blue.400" mt={1} />
+                                                    <Text color="gray.300" fontSize="sm">
+                                                        Choose room type: Public, Private, or Global
+                                                    </Text>
+                                                </ListItem>
+                                                <ListItem display="flex" alignItems="flex-start">
+                                                    <ListIcon as={InfoIcon} color="blue.400" mt={1} />
+                                                    <Text color="gray.300" fontSize="sm">
+                                                        Set maximum players (2-10 for Public/Private, 10 for Global)
+                                                    </Text>
+                                                </ListItem>
+                                                <ListItem display="flex" alignItems="flex-start">
+                                                    <ListIcon as={WarningIcon} color="orange.400" mt={1} />
+                                                    <Text color="gray.300" fontSize="sm">
+                                                        <Text as="span" fontWeight="bold">Entry Fee:</Text> 50 carbon credits (for Public/Global rooms only)
+                                                    </Text>
+                                                </ListItem>
+                                                <ListItem display="flex" alignItems="flex-start">
+                                                    <ListIcon as={CheckCircleIcon} color="green.400" mt={1} />
+                                                    <Text color="gray.300" fontSize="sm">
+                                                        <Text as="span" fontWeight="bold">Private Rooms:</Text> FREE - No entry fee! Perfect for playing with friends
+                                                    </Text>
+                                                </ListItem>
+                                            </List>
+                                        </Box>
+
+                                        <Box>
+                                            <Text fontWeight="bold" mb={2} color="white" fontSize="md">Join with Invite Code</Text>
+                                            <List spacing={2}>
+                                                <ListItem display="flex" alignItems="flex-start">
+                                                    <ListIcon as={InfoIcon} color="blue.400" mt={1} />
+                                                    <Text color="gray.300" fontSize="sm">
+                                                        Click "Join with Invite Code" in the lobby
+                                                    </Text>
+                                                </ListItem>
+                                                <ListItem display="flex" alignItems="flex-start">
+                                                    <ListIcon as={InfoIcon} color="blue.400" mt={1} />
+                                                    <Text color="gray.300" fontSize="sm">
+                                                        Enter the 6-character code shared by the room creator
+                                                    </Text>
+                                                </ListItem>
+                                                <ListItem display="flex" alignItems="flex-start">
+                                                    <ListIcon as={CheckCircleIcon} color="green.400" mt={1} />
+                                                    <Text color="gray.300" fontSize="sm">
+                                                        <Text as="span" fontWeight="bold">Entry Fee:</Text> FREE - Private rooms have no entry fee
+                                                    </Text>
+                                                </ListItem>
+                                                <ListItem display="flex" alignItems="flex-start">
+                                                    <ListIcon as={WarningIcon} color="orange.400" mt={1} />
+                                                    <Text color="gray.300" fontSize="sm">
+                                                        Invite codes expire after 24 hours
+                                                    </Text>
+                                                </ListItem>
+                                            </List>
+                                        </Box>
+
+                                        <Box bg="yellow.900" p={4} borderRadius="md">
+                                            <Text fontWeight="bold" mb={2} color="yellow.200" fontSize="md">Entry Fee Summary</Text>
+                                            <VStack spacing={2} align="start">
+                                                <Text fontSize="sm" color="gray.200">
+                                                    • Public Rooms: 50 credits to create or join
+                                                </Text>
+                                                <Text fontSize="sm" color="gray.200">
+                                                    • Global Rooms: 50 credits to create or join
+                                                </Text>
+                                                <Text fontSize="sm" color="gray.200">
+                                                    • Quick Play: 50 credits
+                                                </Text>
+                                                <Text fontSize="sm" color="green.200" fontWeight="bold">
+                                                    • Private Rooms (with invite code): FREE
+                                                </Text>
+                                            </VStack>
+                                        </Box>
+
+                                        <Box bg="blue.900" p={4} borderRadius="md">
+                                            <Text fontWeight="bold" mb={2} color="blue.200" fontSize="md">How to Earn Credits</Text>
+                                            <VStack spacing={2} align="start">
+                                                <Text fontSize="sm" color="gray.200">
+                                                    • Complete games to earn 10-200+ credits based on performance
+                                                </Text>
+                                                <Text fontSize="sm" color="gray.200">
+                                                    • Rank higher for more credits (1st place: 100+ base credits)
+                                                </Text>
+                                                <Text fontSize="sm" color="gray.200">
+                                                    • Achieve high carbon scores for bonus credits (up to +50)
+                                                </Text>
+                                                <Text fontSize="sm" color="gray.200">
+                                                    • Make profitable trades for bonus credits (up to +50)
+                                                </Text>
+                                                <Text fontSize="sm" color="gray.200">
+                                                    • New players start with 100 credits
+                                                </Text>
+                                            </VStack>
+                                        </Box>
+                                    </VStack>
+                                </Box>
+
+                                <Divider />
+
+                                <Box>
                                     <Heading size="lg" mb={4} color="green.400">Power-Ups</Heading>
                                     <Text color="gray.300" mb={4}>
                                         Purchase power-ups from your profile using carbon credits. Use them strategically during gameplay.
