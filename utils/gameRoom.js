@@ -216,16 +216,25 @@ export async function joinRoomByInviteCode(inviteCode, userId, username) {
 }
 
 export async function leaveGameRoom(roomId, userId) {
-    const roomRef = doc(db, 'gameRooms', roomId);
+    const firestore = getDb() || db;
+    const roomRef = doc(firestore, 'gameRooms', roomId);
     const roomSnap = await getDoc(roomRef);
     
     if (!roomSnap.exists()) return;
     
     const roomData = roomSnap.data();
     const players = { ...roomData.players };
+    
+    // Remove player from players list
     delete players[userId];
     
+    // Also remove from leaderboard if exists
+    const leaderboard = { ...roomData.leaderboard };
+    delete leaderboard[userId];
+    
     const newPlayerCount = Object.keys(players).length;
+    
+    console.log(`Player ${userId} left room ${roomId}. Remaining players: ${newPlayerCount}`);
     
     // Don't delete global rooms, just remove the player
     if (newPlayerCount === 0 && roomData.roomType !== ROOM_TYPES.GLOBAL) {
@@ -235,6 +244,7 @@ export async function leaveGameRoom(roomId, userId) {
     } else {
         let updates = {
             players,
+            leaderboard,
             currentPlayers: newPlayerCount
         };
         

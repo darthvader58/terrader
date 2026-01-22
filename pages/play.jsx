@@ -154,14 +154,23 @@ const Play = () => {
                 // Deduct 100 credits for leaving
                 try {
                     const { doc, updateDoc, increment } = await import('firebase/firestore');
-                    const { db } = await import('@/db');
-                    const userRef = doc(db, 'users', user.uid);
+                    const { getDb } = await import('@/db');
+                    const { leaveGameRoom } = await import('@/utils/gameRoom');
+                    
+                    const firestore = getDb();
+                    const userRef = doc(firestore, 'users', user.uid);
+                    
+                    // Deduct credits
                     await updateDoc(userRef, {
                         carbonCredits: increment(-100)
                     });
-                    console.log('Leave penalty applied: -100 credits');
+                    
+                    // Remove player from room
+                    await leaveGameRoom(roomId, user.uid);
+                    
+                    console.log('Leave penalty applied: -100 credits, removed from room');
                 } catch (error) {
-                    console.error('Error deducting credits:', error);
+                    console.error('Error handling leave:', error);
                 }
             }
         };
@@ -171,14 +180,23 @@ const Play = () => {
                 hasLeft = true;
                 try {
                     const { doc, updateDoc, increment } = await import('firebase/firestore');
-                    const { db } = await import('@/db');
-                    const userRef = doc(db, 'users', user.uid);
+                    const { getDb } = await import('@/db');
+                    const { leaveGameRoom } = await import('@/utils/gameRoom');
+                    
+                    const firestore = getDb();
+                    const userRef = doc(firestore, 'users', user.uid);
+                    
+                    // Deduct credits
                     await updateDoc(userRef, {
                         carbonCredits: increment(-100)
                     });
-                    console.log('Leave penalty applied (visibility): -100 credits');
+                    
+                    // Remove player from room
+                    await leaveGameRoom(roomId, user.uid);
+                    
+                    console.log('Leave penalty applied (visibility): -100 credits, removed from room');
                 } catch (error) {
-                    console.error('Error deducting credits:', error);
+                    console.error('Error handling leave:', error);
                 }
             }
         };
@@ -840,11 +858,19 @@ const Play = () => {
                                         if (confirm('Leave game? You will lose 100 credits and your progress will not be saved.')) {
                                             try {
                                                 const { doc, updateDoc, increment } = await import('firebase/firestore');
-                                                const { db } = await import('@/db');
-                                                const userRef = doc(db, 'users', user.uid);
+                                                const { getDb } = await import('@/db');
+                                                const { leaveGameRoom } = await import('@/utils/gameRoom');
+                                                
+                                                const firestore = getDb();
+                                                const userRef = doc(firestore, 'users', user.uid);
+                                                
+                                                // Deduct credits
                                                 await updateDoc(userRef, {
                                                     carbonCredits: increment(-100)
                                                 });
+                                                
+                                                // Remove player from room
+                                                await leaveGameRoom(roomId, user.uid);
                                                 
                                                 // Refresh user data
                                                 if (refreshUserData) {
@@ -853,7 +879,7 @@ const Play = () => {
                                                 
                                                 toast({
                                                     title: "Left game",
-                                                    description: "100 credits deducted",
+                                                    description: "100 credits deducted, removed from room",
                                                     status: "warning",
                                                     duration: 3000,
                                                 });
