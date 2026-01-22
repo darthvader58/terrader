@@ -38,7 +38,7 @@ const Login = () => {
 
     useEffect(() => {
         if (user && !loading) {
-            router.push('/dash');
+            router.push('/lobby');
         }
     }, [user, loading, router]);
 
@@ -54,7 +54,7 @@ const Login = () => {
                 status: "success",
                 duration: 3000,
             });
-            router.push('/dash');
+            router.push('/lobby');
         } else {
             toast({
                 title: "Login failed",
@@ -76,7 +76,7 @@ const Login = () => {
                 status: "success",
                 duration: 3000,
             });
-            router.push('/dash');
+            router.push('/lobby');
         } else {
             toast({
                 title: "Sign-in failed",
