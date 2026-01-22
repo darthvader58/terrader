@@ -258,7 +258,7 @@ const Help = () => {
                                                 <ListItem display="flex" alignItems="flex-start">
                                                     <ListIcon as={InfoIcon} color="blue.400" mt={1} />
                                                     <Text color="gray.300" fontSize="sm">
-                                                        Click "Quick Play" button in the lobby
+                                                        Click &quot;Quick Play&quot; button in the lobby
                                                     </Text>
                                                 </ListItem>
                                                 <ListItem display="flex" alignItems="flex-start">
@@ -294,7 +294,7 @@ const Help = () => {
                                                 <ListItem display="flex" alignItems="flex-start">
                                                     <ListIcon as={InfoIcon} color="blue.400" mt={1} />
                                                     <Text color="gray.300" fontSize="sm">
-                                                        Click "Join" button on any room that's not full
+                                                        Click &quot;Join&quot; button on any room that&apos;s not full
                                                     </Text>
                                                 </ListItem>
                                                 <ListItem display="flex" alignItems="flex-start">
@@ -318,7 +318,7 @@ const Help = () => {
                                                 <ListItem display="flex" alignItems="flex-start">
                                                     <ListIcon as={InfoIcon} color="blue.400" mt={1} />
                                                     <Text color="gray.300" fontSize="sm">
-                                                        Click "Create Room" button in the lobby
+                                                        Click &quot;Create Room&quot; button in the lobby
                                                     </Text>
                                                 </ListItem>
                                                 <ListItem display="flex" alignItems="flex-start">
@@ -354,7 +354,7 @@ const Help = () => {
                                                 <ListItem display="flex" alignItems="flex-start">
                                                     <ListIcon as={InfoIcon} color="blue.400" mt={1} />
                                                     <Text color="gray.300" fontSize="sm">
-                                                        Click "Join with Invite Code" in the lobby
+                                                        Click &quot;Join with Invite Code&quot; in the lobby
                                                     </Text>
                                                 </ListItem>
                                                 <ListItem display="flex" alignItems="flex-start">
@@ -560,7 +560,7 @@ const Help = () => {
                                         <ListItem display="flex" alignItems="flex-start">
                                             <ListIcon as={InfoIcon} color="blue.300" mt={1} />
                                             <Text color="gray.200" fontSize="sm">
-                                                The game is designed to raise awareness about cryptocurrency's environmental impact
+                                                The game is designed to raise awareness about cryptocurrency&apos;s environmental impact
                                             </Text>
                                         </ListItem>
                                         <ListItem display="flex" alignItems="flex-start">

@@ -47,7 +47,7 @@ const BuyCredits = () => {
                                     Coming Soon!
                                 </Heading>
                                 <Text fontSize="lg" color="gray.300" maxW="md">
-                                    We're working on implementing a secure payment system to allow you to purchase carbon credits with real money.
+                                    We&apos;re working on implementing a secure payment system to allow you to purchase carbon credits with real money.
                                 </Text>
                                 <Box
                                     bg="blue.900"
