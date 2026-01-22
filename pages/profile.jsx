@@ -37,7 +37,7 @@ import Protect from "@/components/Protect";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Profile = () => {
-    const { user, updateUserProfile } = useAuth();
+    const { user, updateUserProfile, refreshUserData } = useAuth();
     const toast = useToast();
     const [editing, setEditing] = useState(false);
     const [username, setUsername] = useState(user?.username || "");
@@ -116,6 +116,11 @@ const Profile = () => {
             setUsername(user.username);
             loadGameHistory();
             setOwnedPowerUps(user.powerUps || []);
+        }
+        
+        // Refresh user data when profile page loads to get latest credits
+        if (refreshUserData) {
+            refreshUserData();
         }
     }, [user]);
 

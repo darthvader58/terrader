@@ -35,12 +35,12 @@ import PowerUpsPanel from "@/components/PowerUpsPanel";
 import OrderBook from "@/components/OrderBook";
 import MarketDepth from "@/components/MarketDepth";
 import RecentTrades from "@/components/RecentTrades";
-import { CRYPTO_COINS, GAME_CONFIG, POWER_UPS, calculateCarbonScore, calculateProfit, generatePriceMovement, calculateCarbonFootprint, generateBotTrade, calculateOrderBook, calculateCreditsEarned } from "@/utils/gameLogic";
+import { CRYPTO_COINS, GAME_CONFIG, POWER_UPS, calculateCarbonScore, calculateProfit, generatePriceMovement, calculateCarbonFootprint, calculateCarbonScorePenalty, generateBotTrade, calculateOrderBook, calculateCreditsEarned } from "@/utils/gameLogic";
 import { useAuth } from "@/contexts/AuthContext";
 import { subscribeToRoom, updatePlayerScore, finishGame } from "@/utils/gameRoom";
 
 const Play = () => {
-    const { user } = useAuth();
+    const { user, refreshUserData } = useAuth();
     const router = useRouter();
     const { roomId } = router.query;
     const toast = useToast();
@@ -69,7 +69,7 @@ const Play = () => {
     const [marketStats, setMarketStats] = useState({});
     const [tradingVolumes, setTradingVolumes] = useState({});
     const [profit, setProfit] = useState(0);
-    const [carbonFootprint, setCarbonFootprint] = useState(10);
+    const [carbonFootprint, setCarbonFootprint] = useState(0); // Changed from 10 to 0
 
     useEffect(() => {
         const initialPrices = {};
@@ -154,7 +154,7 @@ const Play = () => {
                     const { db } = await import('@/db');
                     const userRef = doc(db, 'users', user.uid);
                     await updateDoc(userRef, {
-                        credits: increment(-100)
+                        carbonCredits: increment(-100)
                     });
                 } catch (error) {
                     console.error('Error deducting credits:', error);
@@ -213,15 +213,26 @@ const Play = () => {
     
     // Update profit and carbon footprint whenever portfolio or prices change
     useEffect(() => {
-        const currentProfit = calculateProfit(portfolio, Object.fromEntries(
-            Object.entries(prices).map(([id, p]) => [id, p.current])
-        ));
-        setProfit(currentProfit);
+        // Only calculate if prices are initialized
+        if (Object.keys(prices).length > 0) {
+            const currentPricesMap = Object.fromEntries(
+                Object.entries(prices).map(([id, p]) => [id, p.current])
+            );
+            const currentProfit = calculateProfit(portfolio, currentPricesMap);
+            setProfit(currentProfit);
+            
+            console.log('Calculating profit:', {
+                balance: portfolio.balance,
+                holdings: portfolio.holdings,
+                prices: currentPricesMap,
+                profit: currentProfit
+            });
+        }
         
         const currentFootprint = calculateCarbonFootprint(trades, portfolio.holdings);
         setCarbonFootprint(currentFootprint);
         
-        console.log('Updated profit:', currentProfit, 'footprint:', currentFootprint);
+        console.log('Updated profit:', profit, 'footprint:', currentFootprint);
     }, [portfolio, prices, trades]);
 
     const handleGameEnd = async () => {
@@ -260,10 +271,15 @@ const Play = () => {
                 const userDoc = await getDoc(userRef);
                 if (userDoc.exists()) {
                     await updateDoc(userRef, {
-                        credits: increment(creditsEarned),
+                        carbonCredits: increment(creditsEarned),
                         totalGames: increment(1),
                         ...(myRank === 1 ? { wins: increment(1) } : {})
                     });
+                    
+                    // Refresh user data to show updated credits
+                    if (refreshUserData) {
+                        await refreshUserData();
+                    }
                 }
             } catch (error) {
                 console.error('Error saving game result:', error);
@@ -428,9 +444,10 @@ const Play = () => {
                 const bot = botPlayers[Math.floor(Math.random() * botPlayers.length)];
                 const randomCoin = CRYPTO_COINS[Math.floor(Math.random() * CRYPTO_COINS.length)];
                 const currentPrice = prices[randomCoin.id]?.current || 50;
+                const priceChange = prices[randomCoin.id]?.change || 0;
                 const trend = marketTrends[randomCoin.id] || 0;
                 
-                const botTrade = generateBotTrade(randomCoin.id, currentPrice, trend);
+                const botTrade = generateBotTrade(randomCoin.id, currentPrice, trend, priceChange);
                 
                 // Calculate carbon score for bot trade
                 const botScoreChange = calculateCarbonScore(botTrade);
@@ -557,16 +574,28 @@ const Play = () => {
                 return;
             }
             
-            setPortfolio(prev => ({
-                balance: prev.balance - cost,
-                holdings: {
-                    ...prev.holdings,
-                    [coin.id]: {
-                        quantity: (prev.holdings[coin.id]?.quantity || 0) + quantity,
-                        avgPrice: ((prev.holdings[coin.id]?.quantity || 0) * (prev.holdings[coin.id]?.avgPrice || 0) + cost) / ((prev.holdings[coin.id]?.quantity || 0) + quantity)
+            setPortfolio(prev => {
+                const newPortfolio = {
+                    balance: prev.balance - cost,
+                    holdings: {
+                        ...prev.holdings,
+                        [coin.id]: {
+                            quantity: (prev.holdings[coin.id]?.quantity || 0) + quantity,
+                            avgPrice: ((prev.holdings[coin.id]?.quantity || 0) * (prev.holdings[coin.id]?.avgPrice || 0) + cost) / ((prev.holdings[coin.id]?.quantity || 0) + quantity)
+                        }
                     }
-                }
-            }));
+                };
+                
+                // Immediately calculate and update profit
+                const currentPricesMap = Object.fromEntries(
+                    Object.entries(prices).map(([id, p]) => [id, p.current])
+                );
+                const newProfit = calculateProfit(newPortfolio, currentPricesMap);
+                setProfit(newProfit);
+                console.log('After BUY - New profit:', newProfit);
+                
+                return newPortfolio;
+            });
         } else {
             const holding = portfolio.holdings[coin.id];
             if (!holding || holding.quantity < quantity) {
@@ -579,21 +608,43 @@ const Play = () => {
             }
             
             const revenue = quantity * price;
-            setPortfolio(prev => ({
-                balance: prev.balance + revenue,
-                holdings: {
-                    ...prev.holdings,
-                    [coin.id]: {
-                        ...holding,
-                        quantity: holding.quantity - quantity
+            setPortfolio(prev => {
+                const newPortfolio = {
+                    balance: prev.balance + revenue,
+                    holdings: {
+                        ...prev.holdings,
+                        [coin.id]: {
+                            ...holding,
+                            quantity: holding.quantity - quantity
+                        }
                     }
-                }
-            }));
+                };
+                
+                // Immediately calculate and update profit
+                const currentPricesMap = Object.fromEntries(
+                    Object.entries(prices).map(([id, p]) => [id, p.current])
+                );
+                const newProfit = calculateProfit(newPortfolio, currentPricesMap);
+                setProfit(newProfit);
+                console.log('After SELL - New profit:', newProfit);
+                
+                return newPortfolio;
+            });
         }
         
         const scoreChange = calculateCarbonScore(trade) * carbonMultiplier;
-        setCarbonScore(prev => prev + scoreChange);
-        setTrades(prev => [...prev, trade]);
+        
+        // Apply carbon footprint penalty
+        const newTrades = [...trades, trade];
+        const newFootprint = calculateCarbonFootprint(newTrades, portfolio.holdings);
+        const footprintPenalty = calculateCarbonScorePenalty(newFootprint);
+        
+        setCarbonScore(prev => prev + scoreChange + footprintPenalty);
+        setTrades(newTrades);
+        
+        // Immediately update carbon footprint
+        setCarbonFootprint(newFootprint);
+        console.log('After trade - Carbon footprint:', newFootprint, 'Penalty:', footprintPenalty);
         
         // Add to recent trades
         setRecentTrades(prev => ({
@@ -625,8 +676,8 @@ const Play = () => {
         
         toast({
             title: `${type === 'buy' ? 'Bought' : 'Sold'} ${quantity.toFixed(3)} ${coin.symbol}`,
-            description: `Carbon score ${scoreChange > 0 ? '+' : ''}${scoreChange}`,
-            status: scoreChange > 0 ? "success" : "warning",
+            description: `Carbon score ${scoreChange > 0 ? '+' : ''}${scoreChange}${footprintPenalty !== 0 ? ` (${footprintPenalty} footprint penalty)` : ''}`,
+            status: (scoreChange + footprintPenalty) > 0 ? "success" : "warning",
             duration: 2000,
         });
     };
@@ -654,16 +705,16 @@ const Play = () => {
                                 
                                 <Stat>
                                     <StatLabel>Carbon Footprint</StatLabel>
-                                    <StatNumber color={carbonFootprint < 200 ? "green.400" : carbonFootprint < 400 ? "yellow.400" : "red.400"}>
-                                        {carbonFootprint}
+                                    <StatNumber color={carbonFootprint < 5 ? "green.400" : carbonFootprint < 15 ? "yellow.400" : carbonFootprint < 20 ? "orange.400" : "red.400"}>
+                                        {carbonFootprint.toFixed(1)}
                                     </StatNumber>
                                     <StatHelpText>
-                                        {carbonFootprint < 200 ? "Excellent" : carbonFootprint < 400 ? "Good" : "Poor"}
+                                        {carbonFootprint < 5 ? "Excellent" : carbonFootprint < 15 ? "Good" : carbonFootprint < 20 ? "Fair" : "Bad"}
                                     </StatHelpText>
                                     <Box mt={2} w="150px">
                                         <Progress 
-                                            value={(carbonFootprint / 1000) * 100} 
-                                            colorScheme={carbonFootprint < 200 ? "green" : carbonFootprint < 400 ? "yellow" : "red"}
+                                            value={(carbonFootprint / 30) * 100} 
+                                            colorScheme={carbonFootprint < 5 ? "green" : carbonFootprint < 15 ? "yellow" : carbonFootprint < 20 ? "orange" : "red"}
                                             size="sm"
                                             borderRadius="full"
                                         />

@@ -44,7 +44,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { createGameRoom, getAvailableRooms, joinGameRoom, joinRoomByInviteCode, getOrCreateGlobalRoom, ROOM_TYPES } from '@/utils/gameRoom';
 
 const Lobby = () => {
-    const { user } = useAuth();
+    const { user, refreshUserData } = useAuth();
     const router = useRouter();
     const toast = useToast();
     const { isOpen, onOpen, onClose } = useDisclosure();
@@ -66,6 +66,12 @@ const Lobby = () => {
     useEffect(() => {
         loadRooms();
         const interval = setInterval(loadRooms, 5000);
+        
+        // Refresh user data when lobby loads to get latest credits
+        if (refreshUserData) {
+            refreshUserData();
+        }
+        
         return () => clearInterval(interval);
     }, []);
 

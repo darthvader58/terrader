@@ -86,10 +86,19 @@ export function calculateProfit(portfolio, currentPrices) {
     
     Object.keys(portfolio.holdings).forEach(coinId => {
         const holding = portfolio.holdings[coinId];
-        totalValue += holding.quantity * currentPrices[coinId];
+        const currentPrice = currentPrices[coinId];
+        
+        if (currentPrice && holding.quantity > 0) {
+            const holdingValue = holding.quantity * currentPrice;
+            totalValue += holdingValue;
+            console.log(`${coinId}: ${holding.quantity} × $${currentPrice} = $${holdingValue.toFixed(2)}`);
+        }
     });
     
-    return totalValue - GAME_CONFIG.INITIAL_BALANCE;
+    const profit = totalValue - GAME_CONFIG.INITIAL_BALANCE;
+    console.log(`Total value: $${totalValue.toFixed(2)}, Initial: $${GAME_CONFIG.INITIAL_BALANCE}, Profit: $${profit.toFixed(2)}`);
+    
+    return profit;
 }
 
 export function generatePriceMovement(currentPrice, newsImpact = 0, marketTrend = 0, tradingVolume = 0) {
@@ -116,13 +125,49 @@ export function generatePriceMovement(currentPrice, newsImpact = 0, marketTrend 
     return Math.max(10, Math.min(200, Number(newPrice.toFixed(2))));
 }
 
-export function generateBotTrade(coinId, currentPrice, marketTrend) {
-    // Bots trade more aggressively based on market trends
-    const shouldBuy = marketTrend > 0.1 ? Math.random() > 0.2 : // 80% buy in strong bullish
-                      marketTrend < -0.1 ? Math.random() > 0.8 : // 20% buy in strong bearish
-                      Math.random() > 0.5; // 50% in neutral
+export function generateBotTrade(coinId, currentPrice, marketTrend, priceChange = 0) {
+    // Bots make smarter decisions based on multiple factors
+    let buyProbability = 0.5; // Start neutral
     
-    const quantity = (Math.random() * 10 + 2).toFixed(2); // 2-12 units (increased from 1-6)
+    // Strong bullish trend increases buy probability
+    if (marketTrend > 0.3) {
+        buyProbability = 0.85; // 85% chance to buy
+    } else if (marketTrend > 0.1) {
+        buyProbability = 0.70; // 70% chance to buy
+    } else if (marketTrend < -0.3) {
+        buyProbability = 0.15; // 15% chance to buy (sell more)
+    } else if (marketTrend < -0.1) {
+        buyProbability = 0.30; // 30% chance to buy
+    }
+    
+    // Recent price increase = more likely to buy (momentum trading)
+    if (priceChange > 5) {
+        buyProbability += 0.15;
+    } else if (priceChange < -5) {
+        buyProbability -= 0.15;
+    }
+    
+    // Price level affects decision (buy low, sell high)
+    if (currentPrice < 40) {
+        buyProbability += 0.10; // Cheaper = more likely to buy
+    } else if (currentPrice > 80) {
+        buyProbability -= 0.10; // Expensive = less likely to buy
+    }
+    
+    // Clamp between 0 and 1
+    buyProbability = Math.max(0, Math.min(1, buyProbability));
+    
+    const shouldBuy = Math.random() < buyProbability;
+    
+    // Smarter quantity based on price and decision confidence
+    let baseQuantity = 5;
+    if (currentPrice < 30) {
+        baseQuantity = 10; // Buy more of cheap coins
+    } else if (currentPrice > 80) {
+        baseQuantity = 3; // Buy less of expensive coins
+    }
+    
+    const quantity = (Math.random() * baseQuantity + 2).toFixed(3); // 2-12 units with 3 decimals
     
     return {
         type: shouldBuy ? 'buy' : 'sell',
@@ -177,18 +222,33 @@ export function calculateOrderBook(recentTrades, currentPrice, newsImpact = 0, m
 export function calculateCarbonFootprint(trades, holdings) {
     let footprint = 0;
     
-    // Each trade adds significantly to footprint
+    // Each trade adds to footprint (reduced scale)
     trades.forEach(trade => {
-        footprint += Math.abs(trade.quantity * trade.price * 0.01); // Increased from 0.001
+        footprint += Math.abs(trade.quantity * trade.price * 0.001); // Reduced from 0.01
     });
     
-    // Holding coins reduces footprint over time (sustainable holding)
+    // Holding coins reduces footprint over time
     Object.values(holdings).forEach(holding => {
-        footprint -= holding.quantity * 0.002; // Increased from 0.0002
+        footprint -= holding.quantity * 0.0005; // Reduced from 0.002
     });
     
-    // Return absolute value, lower is better, ensure it's always positive and visible
-    return Math.max(10, Math.floor(footprint)); // Minimum 10 to show movement
+    // Return absolute value, lower is better
+    // Scale: 0-5 Excellent, 5-15 Good, 15-20 Fair, 20+ Bad
+    return Math.max(0, Math.floor(footprint * 10) / 10); // Keep 1 decimal
+}
+
+export function calculateCarbonScorePenalty(carbonFootprint) {
+    // Higher footprint = bigger penalty to carbon score
+    // Scale: 0-5 = no penalty, 5-15 = -10 to -30, 15-20 = -30 to -50, 20+ = -50+
+    if (carbonFootprint < 5) {
+        return 0; // Excellent - no penalty
+    } else if (carbonFootprint < 15) {
+        return -Math.floor((carbonFootprint - 5) * 2); // -2 to -20
+    } else if (carbonFootprint < 20) {
+        return -20 - Math.floor((carbonFootprint - 15) * 6); // -20 to -50
+    } else {
+        return -50 - Math.floor((carbonFootprint - 20) * 5); // -50 and worse
+    }
 }
 
 export function calculateCreditsEarned(rank, totalPlayers, carbonScore, profit) {

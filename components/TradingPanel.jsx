@@ -66,11 +66,19 @@ const TradingPanel = ({
                         </Text>
                         <NumberInput
                             value={quantity}
-                            onChange={(_, val) => setQuantity(val)}
+                            onChange={(valueString, valueNumber) => {
+                                // Allow typing decimals by using the string value
+                                if (valueString === '' || valueString === '.') {
+                                    setQuantity(0);
+                                } else if (!isNaN(valueNumber)) {
+                                    setQuantity(valueNumber);
+                                }
+                            }}
                             min={0}
                             max={Math.max(maxBuy, maxSell)}
                             step={0.001}
                             precision={3}
+                            allowMouseWheel
                         >
                             <NumberInputField 
                                 bg="brandBlack.200" 
@@ -79,6 +87,7 @@ const TradingPanel = ({
                                 _focus={{
                                     borderColor: "green.400"
                                 }}
+                                placeholder="0.000"
                             />
                             <NumberInputStepper>
                                 <NumberIncrementStepper />

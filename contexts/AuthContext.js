@@ -139,6 +139,22 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const refreshUserData = async () => {
+        if (!user) return;
+        
+        try {
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (userDoc.exists()) {
+                setUser(prev => ({
+                    ...prev,
+                    ...userDoc.data()
+                }));
+            }
+        } catch (error) {
+            console.error('Refresh user data error:', error);
+        }
+    };
+
     const value = {
         user,
         loading,
@@ -147,6 +163,7 @@ export const AuthProvider = ({ children }) => {
         signInWithEmail,
         signOut,
         updateUserProfile,
+        refreshUserData,
     };
 
     return (
