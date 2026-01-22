@@ -253,18 +253,26 @@ export async function leaveGameRoom(roomId, userId) {
 }
 
 export async function startGame(roomId) {
-    const roomRef = doc(db, 'gameRooms', roomId);
-    
-    await updateDoc(roomRef, {
-        status: ROOM_STATUS.IN_PROGRESS,
-        startTime: Date.now(),
-        endTime: Date.now() + (15 * 60 * 1000) // 15 minutes
-    });
-    
-    // If this was a global room, create a new one
-    const roomSnap = await getDoc(roomRef);
-    if (roomSnap.exists() && roomSnap.data().roomType === ROOM_TYPES.GLOBAL) {
-        await getOrCreateGlobalRoom();
+    try {
+        console.log('Starting game for room:', roomId);
+        const roomRef = doc(db, 'gameRooms', roomId);
+        
+        await updateDoc(roomRef, {
+            status: ROOM_STATUS.IN_PROGRESS,
+            startTime: Date.now(),
+            endTime: Date.now() + (20 * 60 * 1000) // 20 minutes
+        });
+        
+        console.log('Game started successfully');
+        
+        // If this was a global room, create a new one
+        const roomSnap = await getDoc(roomRef);
+        if (roomSnap.exists() && roomSnap.data().roomType === ROOM_TYPES.GLOBAL) {
+            await getOrCreateGlobalRoom();
+        }
+    } catch (error) {
+        console.error('Error starting game:', error);
+        throw new Error('Failed to start game: ' + error.message);
     }
 }
 
@@ -529,15 +537,25 @@ export async function quickPlay(userId, username) {
     
     // Wait 5-10 seconds for other players to join
     setTimeout(async () => {
-        const roomSnap = await getDoc(doc(db, 'gameRooms', roomId));
-        if (roomSnap.exists() && roomSnap.data().status === ROOM_STATUS.WAITING) {
-            // Update room to indicate waiting is over
-            await updateDoc(doc(db, 'gameRooms', roomId), {
-                waitingForPlayers: false
-            });
+        try {
+            // Re-import db to ensure it's available in this context
+            const { getFirestore } = await import('firebase/firestore');
+            const { getApps } = await import('firebase/app');
+            const app = getApps()[0];
+            const firestore = getFirestore(app);
             
-            // Start the game
-            await startGame(roomId);
+            const roomSnap = await getDoc(doc(firestore, 'gameRooms', roomId));
+            if (roomSnap.exists() && roomSnap.data().status === ROOM_STATUS.WAITING) {
+                // Update room to indicate waiting is over
+                await updateDoc(doc(firestore, 'gameRooms', roomId), {
+                    waitingForPlayers: false
+                });
+                
+                // Start the game
+                await startGame(roomId);
+            }
+        } catch (error) {
+            console.error('Error starting quick play game:', error);
         }
     }, waitTime);
     
