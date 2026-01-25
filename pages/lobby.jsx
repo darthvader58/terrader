@@ -265,17 +265,17 @@ const Lobby = () => {
             
             if (result.withBots) {
                 toast({
-                    title: 'Game starting soon!',
-                    description: `Waiting ${result.waitTime || 5} seconds for other players to join...`,
+                    title: 'Quick Play room created',
+                    description: `Waiting ${result.waitTime || 8} seconds for other players to join. Game will start automatically.`,
                     status: 'info',
                     duration: 5000,
                 });
             } else if (result.joined) {
                 toast({
-                    title: 'Joined a room!',
-                    description: '50 credits deducted as entry fee.',
+                    title: 'Matched with other players!',
+                    description: `Joined an existing room. Game starts in ${result.waitTime || 5} seconds.`,
                     status: 'success',
-                    duration: 2000,
+                    duration: 3000,
                 });
             }
             

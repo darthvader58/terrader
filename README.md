@@ -14,4 +14,4 @@ Terrader is a free for all game where a person competes against everyone in a ro
 
 A carbon footprint meter is displayed on the main game screen so that players make their trades in hopes of reducing the carbon footprint and hence saving the environment virtually. 
 
-Each trade will result in a carbon score being increased or decreased with respect to the efficiency and sustainability of the trades. Carbon score is the deciding factor of the leaderboard that updates every 2 minutes in a single game of 15 minutes (whose timeer is displayed on the top right at the start of the game).
+Each trade will result in a carbon score being increased or decreased with respect to the efficiency and sustainability of the trades. Carbon score is the deciding factor of the leaderboard that updates every 2 minutes in a single game of 15 minutes (whose timer is displayed on the top right at the start of the game).

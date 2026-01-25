@@ -13,7 +13,8 @@ import {
     onSnapshot,
     arrayUnion,
     increment,
-    deleteDoc
+    deleteDoc,
+    runTransaction
 } from 'firebase/firestore';
 import db, { getDb } from '@/db';
 
@@ -472,28 +473,155 @@ export async function getUserGameHistory(userId, limitCount = 10) {
 
 // Quick Play - Join random public room or create one with bots
 export async function quickPlay(userId, username) {
-    // Try to find an available public room
-    const publicRoomsQuery = query(
+    console.log('Quick Play initiated for user:', userId);
+    
+    // Try multiple times to find/join a room before creating a new one
+    for (let attempt = 0; attempt < 3; attempt++) {
+        console.log(`Quick Play attempt ${attempt + 1}/3`);
+        
+        // Try to find an available Quick Play room (waiting for players)
+        const quickPlayRoomsQuery = query(
+            collection(db, 'gameRooms'),
+            where('status', '==', ROOM_STATUS.WAITING),
+            where('roomType', '==', ROOM_TYPES.PUBLIC),
+            where('waitingForPlayers', '==', true),
+            orderBy('autoStartTimer', 'desc'), // Prioritize rooms with more time remaining
+            limit(15)
+        );
+        
+        const snapshot = await getDocs(quickPlayRoomsQuery);
+        console.log(`Attempt ${attempt + 1}: Found ${snapshot.docs.length} waiting rooms`);
+        
+        // Find a room that's not full and still waiting for players
+        for (const roomDoc of snapshot.docs) {
+            const roomData = roomDoc.data();
+            const timeRemaining = roomData.autoStartTimer - Date.now();
+            
+            // Only join if room has space and still has at least 2 seconds before auto-start
+            if (roomData.currentPlayers < roomData.maxPlayers && timeRemaining > 2000) {
+                try {
+                    console.log(`Attempting to join existing room: ${roomDoc.id} (${timeRemaining}ms remaining)`);
+                    
+                    // Use transaction to safely join the room
+                    const { runTransaction } = await import('firebase/firestore');
+                    const firestore = getDb() || db;
+                    const roomRef = doc(firestore, 'gameRooms', roomDoc.id);
+                    
+                    await runTransaction(firestore, async (transaction) => {
+                        const roomSnap = await transaction.get(roomRef);
+                        
+                        if (!roomSnap.exists()) {
+                            throw new Error('Room no longer exists');
+                        }
+                        
+                        const currentData = roomSnap.data();
+                        
+                        // Double-check conditions inside transaction
+                        if (currentData.status !== ROOM_STATUS.WAITING) {
+                            throw new Error('Game already started');
+                        }
+                        
+                        if (currentData.currentPlayers >= currentData.maxPlayers) {
+                            throw new Error('Room is full');
+                        }
+                        
+                        if (currentData.players[userId]) {
+                            throw new Error('Already in room');
+                        }
+                        
+                        // Add player to room
+                        transaction.update(roomRef, {
+                            [`players.${userId}`]: {
+                                userId,
+                                username,
+                                joinedAt: Date.now(),
+                                ready: true,
+                                isHost: false,
+                                isBot: false
+                            },
+                            currentPlayers: increment(1)
+                        });
+                    });
+                    
+                    console.log('Successfully joined existing room via transaction');
+                    return { roomId: roomDoc.id, joined: true, waitTime: Math.floor(timeRemaining / 1000) };
+                    
+                } catch (error) {
+                    console.log(`Failed to join room ${roomDoc.id}:`, error.message);
+                    continue; // Try next room if this one failed
+                }
+            }
+        }
+        
+        // If no room found, wait a bit before retrying (helps with race conditions)
+        if (attempt < 2) {
+            console.log('No suitable room found, waiting 500ms before retry...');
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+    }
+    
+    console.log('No suitable rooms found after 3 attempts, creating new Quick Play room');
+    
+    // Add small random delay (0-300ms) to reduce chance of simultaneous room creation
+    const randomDelay = Math.random() * 300;
+    await new Promise(resolve => setTimeout(resolve, randomDelay));
+    
+    // One final check before creating - maybe someone just created a room
+    const finalCheckQuery = query(
         collection(db, 'gameRooms'),
         where('status', '==', ROOM_STATUS.WAITING),
         where('roomType', '==', ROOM_TYPES.PUBLIC),
-        limit(5)
+        where('waitingForPlayers', '==', true),
+        orderBy('autoStartTimer', 'desc'),
+        limit(3)
     );
     
-    const snapshot = await getDocs(publicRoomsQuery);
-    
-    // Find a room that's not full
-    for (const roomDoc of snapshot.docs) {
-        const roomData = roomDoc.data();
-        if (roomData.currentPlayers < roomData.maxPlayers) {
-            try {
-                await joinGameRoom(roomDoc.id, userId, username);
-                return { roomId: roomDoc.id, joined: true };
-            } catch (error) {
-                continue; // Try next room if this one failed
+    const finalSnapshot = await getDocs(finalCheckQuery);
+    if (!finalSnapshot.empty) {
+        console.log('Found room in final check, attempting to join...');
+        for (const roomDoc of finalSnapshot.docs) {
+            const roomData = roomDoc.data();
+            const timeRemaining = roomData.autoStartTimer - Date.now();
+            
+            if (roomData.currentPlayers < roomData.maxPlayers && timeRemaining > 2000) {
+                try {
+                    const firestore = getDb() || db;
+                    const roomRef = doc(firestore, 'gameRooms', roomDoc.id);
+                    
+                    await runTransaction(firestore, async (transaction) => {
+                        const roomSnap = await transaction.get(roomRef);
+                        if (!roomSnap.exists() || roomSnap.data().status !== ROOM_STATUS.WAITING) {
+                            throw new Error('Room not available');
+                        }
+                        
+                        const currentData = roomSnap.data();
+                        if (currentData.currentPlayers >= currentData.maxPlayers || currentData.players[userId]) {
+                            throw new Error('Cannot join');
+                        }
+                        
+                        transaction.update(roomRef, {
+                            [`players.${userId}`]: {
+                                userId,
+                                username,
+                                joinedAt: Date.now(),
+                                ready: true,
+                                isHost: false,
+                                isBot: false
+                            },
+                            currentPlayers: increment(1)
+                        });
+                    });
+                    
+                    console.log('Joined room in final check');
+                    return { roomId: roomDoc.id, joined: true, waitTime: Math.floor(timeRemaining / 1000) };
+                } catch (error) {
+                    console.log('Final check join failed:', error.message);
+                }
             }
         }
     }
+    
+    console.log('Creating new Quick Play room after all checks');
     
     // No available rooms, create one with bots
     const roomId = `quick_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -530,7 +658,7 @@ export async function quickPlay(userId, username) {
         };
     }
     
-    const waitTime = 5000 + Math.random() * 5000; // 5-10 seconds wait
+    const waitTime = 8000 + Math.random() * 4000; // 8-12 seconds wait (increased for better matchmaking)
     
     const roomData = {
         roomId,
