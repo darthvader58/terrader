@@ -59,6 +59,47 @@ export const ACHIEVEMENTS = [
     { id: 'carbon_1k', name: 'Carbon Master', description: 'Earn 1000 carbon score', icon: '🌍', requirement: 1000 },
 ];
 
+const COIN_MARKET_PROFILES = {
+    terra: {
+        fairValue: 92,
+        miningIntensity: 1.3,
+        liquidity: 1.1,
+        volatility: 0.022,
+    },
+    gaia: {
+        fairValue: 72,
+        miningIntensity: 1.0,
+        liquidity: 1.0,
+        volatility: 0.018,
+    },
+    enviro: {
+        fairValue: 52,
+        miningIntensity: 0.65,
+        liquidity: 0.85,
+        volatility: 0.017,
+    },
+    dhara: {
+        fairValue: 34,
+        miningIntensity: 0.82,
+        liquidity: 0.75,
+        volatility: 0.024,
+    },
+};
+
+function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+}
+
+function sigmoid(value) {
+    return 1 / (1 + Math.exp(-value));
+}
+
+function getHoldingValue(holding, fallbackPrice = 0) {
+    if (!holding || !holding.quantity) return 0;
+    const referencePrice = holding.avgPrice || fallbackPrice;
+    return holding.quantity * referencePrice;
+}
+
 export function calculateCarbonScore(trade) {
     const { type, coin, quantity, price } = trade;
     
@@ -102,202 +143,158 @@ export function calculateProfit(portfolio, currentPrices) {
 }
 
 export function generatePriceMovement(currentPrice, newsImpact = 0, marketTrend = 0, tradingVolume = 0) {
-    // Much higher base volatility for visible price changes
-    const baseVolatility = 0.15; // Increased from 0.08 to 0.15 (15% swings)
-    const randomChange = (Math.random() - 0.5) * 2 * baseVolatility;
-    
-    // News has massive impact (up to 12% change)
-    const newsInfluence = newsImpact * 0.12; // Increased from 0.08
-    
-    // Market trend provides strong direction
-    const trendInfluence = marketTrend * 0.06; // Increased from 0.04
-    
-    // Trading volume affects volatility significantly
-    const volumeInfluence = tradingVolume * 0.003; // Increased from 0.002
-    
-    // Add constant movement to ensure prices never stay flat
-    const constantMovement = (Math.random() - 0.5) * 0.02; // ±1% minimum movement
-    
-    const totalChange = randomChange + newsInfluence + trendInfluence + volumeInfluence + constantMovement;
+    const marketProfile = Object.values(COIN_MARKET_PROFILES).reduce((closest, profile) => {
+        return Math.abs(profile.fairValue - currentPrice) < Math.abs(closest.fairValue - currentPrice) ? profile : closest;
+    }, COIN_MARKET_PROFILES.gaia);
+
+    const fairValueGap = (marketProfile.fairValue - currentPrice) / marketProfile.fairValue;
+    const boundedTrend = clamp(marketTrend, -1.5, 1.5);
+    const boundedNews = clamp(newsImpact, -1.2, 1.2);
+
+    // Liquidity lowers slippage and dampens the effect of volume shocks.
+    const normalizedVolume = Math.log10(1 + tradingVolume / 40);
+    const liquidityAdjustment = 1 / marketProfile.liquidity;
+
+    // Structured price process:
+    // 1. Mean reversion toward a long-run fair value
+    // 2. Momentum continuation from market trend
+    // 3. News shock that decays over time outside this function
+    // 4. Liquidity shock from one-sided order flow
+    // 5. Random noise scaled by coin-specific volatility
+    const meanReversion = fairValueGap * 0.045;
+    const momentum = boundedTrend * 0.032;
+    const newsShock = boundedNews * 0.055;
+    const liquidityShock = normalizedVolume * 0.012 * Math.sign(boundedTrend || boundedNews || 1) * liquidityAdjustment;
+    const stochasticNoise = (Math.random() - 0.5) * 2 * marketProfile.volatility;
+
+    // Game-theoretic flavor:
+    // when trend and news disagree, the market becomes less decisive and volatility rises
+    const coordinationPenalty = -Math.abs(boundedTrend - boundedNews) * 0.008;
+    const totalChange = clamp(
+        meanReversion + momentum + newsShock + liquidityShock + stochasticNoise + coordinationPenalty,
+        -0.11,
+        0.11
+    );
+
     const newPrice = currentPrice * (1 + totalChange);
-    
-    // Ensure price stays within reasonable bounds
-    return Math.max(10, Math.min(200, Number(newPrice.toFixed(2))));
+    const lowerBound = marketProfile.fairValue * 0.45;
+    const upperBound = marketProfile.fairValue * 1.95;
+    return Number(clamp(newPrice, lowerBound, upperBound).toFixed(2));
 }
 
 export function generateBotTrade(coinId, currentPrice, marketTrend, priceChange = 0, carbonScore = 0, balance = 500, holdings = {}) {
-    // Advanced bot decision-making system
-    // Bots aim to maximize carbon score while managing risk
-    
-    let tradeScore = 0; // Score to determine if we should trade
-    let buyProbability = 0.5; // Start neutral
-    
-    // 1. MARKET TREND ANALYSIS (40% weight)
-    if (marketTrend > 0.4) {
-        buyProbability = 0.90; // Very bullish - strong buy
-        tradeScore += 40;
-    } else if (marketTrend > 0.2) {
-        buyProbability = 0.75; // Bullish - buy
-        tradeScore += 30;
-    } else if (marketTrend > 0) {
-        buyProbability = 0.60; // Slightly bullish
-        tradeScore += 15;
-    } else if (marketTrend < -0.4) {
-        buyProbability = 0.10; // Very bearish - strong sell
-        tradeScore += 40;
-    } else if (marketTrend < -0.2) {
-        buyProbability = 0.25; // Bearish - sell
-        tradeScore += 30;
-    } else if (marketTrend < 0) {
-        buyProbability = 0.40; // Slightly bearish
-        tradeScore += 15;
-    }
-    
-    // 2. MOMENTUM TRADING (30% weight)
-    if (priceChange > 8) {
-        buyProbability += 0.20; // Strong upward momentum
-        tradeScore += 30;
-    } else if (priceChange > 4) {
-        buyProbability += 0.12; // Moderate upward momentum
-        tradeScore += 20;
-    } else if (priceChange < -8) {
-        buyProbability -= 0.20; // Strong downward momentum
-        tradeScore += 30;
-    } else if (priceChange < -4) {
-        buyProbability -= 0.12; // Moderate downward momentum
-        tradeScore += 20;
-    }
-    
-    // 3. PRICE LEVEL STRATEGY (20% weight)
-    if (currentPrice < 35) {
-        buyProbability += 0.15; // Cheap - buy opportunity
-        tradeScore += 20;
-    } else if (currentPrice < 50) {
-        buyProbability += 0.08;
-        tradeScore += 10;
-    } else if (currentPrice > 90) {
-        buyProbability -= 0.15; // Expensive - sell opportunity
-        tradeScore += 20;
-    } else if (currentPrice > 75) {
-        buyProbability -= 0.08;
-        tradeScore += 10;
-    }
-    
-    // 4. CARBON SCORE OPTIMIZATION (10% weight)
-    // Bots prioritize selling to increase carbon score
-    if (carbonScore < 50) {
-        // Low carbon score - prioritize selling
-        buyProbability -= 0.10;
-        tradeScore += 10;
-    } else if (carbonScore > 150) {
-        // High carbon score - can afford to buy
-        buyProbability += 0.05;
-    }
-    
-    // 5. PORTFOLIO MANAGEMENT
+    const profile = COIN_MARKET_PROFILES[coinId] || COIN_MARKET_PROFILES.gaia;
     const currentHolding = holdings[coinId]?.quantity || 0;
-    const portfolioValue = balance + (currentHolding * currentPrice);
-    
-    // Don't buy if low on balance
-    if (balance < portfolioValue * 0.2) {
-        buyProbability -= 0.15;
+    const holdingValue = currentHolding * currentPrice;
+    const portfolioValue = balance + Object.values(holdings).reduce((sum, holding) => {
+        return sum + getHoldingValue(holding, currentPrice);
+    }, 0);
+    const concentration = portfolioValue > 0 ? holdingValue / portfolioValue : 0;
+    const valuationGap = (profile.fairValue - currentPrice) / profile.fairValue;
+    const momentumSignal = clamp(priceChange / 12, -1, 1);
+    const carbonPressure = clamp((60 - carbonScore) / 120, -1, 1);
+    const cashRatio = portfolioValue > 0 ? balance / portfolioValue : 1;
+
+    // Three strategic bot archetypes:
+    // 1. Market maker: mean reversion
+    // 2. Momentum follower: ride trends
+    // 3. Carbon optimizer: de-risk and sell into strength when footprint pressure is high
+    const buyUtility =
+        (valuationGap * 1.6) +
+        (marketTrend * 1.2) +
+        (momentumSignal * 0.8) +
+        ((cashRatio - 0.35) * 0.9) -
+        (concentration * 1.1) -
+        (carbonPressure * 0.7);
+
+    const sellUtility =
+        ((-valuationGap) * 1.0) +
+        ((-marketTrend) * 0.9) +
+        ((-momentumSignal) * 0.7) +
+        (concentration * 1.4) +
+        (carbonPressure * 1.0) +
+        ((0.18 - cashRatio) * 0.8);
+
+    const waitUtility = 0.15 - (Math.abs(marketTrend) * 0.2) - (Math.abs(momentumSignal) * 0.15);
+
+    // Mixed strategy equilibrium approximation: bots randomize based on utilities
+    const buyWeight = Math.exp(clamp(buyUtility, -3, 3));
+    const sellWeight = Math.exp(clamp(sellUtility, -3, 3));
+    const waitWeight = Math.exp(clamp(waitUtility, -3, 3));
+    const totalWeight = buyWeight + sellWeight + waitWeight;
+    const draw = Math.random() * totalWeight;
+
+    let action = 'wait';
+    if (draw < buyWeight) {
+        action = 'buy';
+    } else if (draw < buyWeight + sellWeight) {
+        action = 'sell';
     }
-    
-    // Sell if holding too much of one coin
-    if (currentHolding * currentPrice > portfolioValue * 0.4) {
-        buyProbability -= 0.20;
-    }
-    
-    // Clamp probability
-    buyProbability = Math.max(0, Math.min(1, buyProbability));
-    
-    // Decide trade type
-    const shouldBuy = Math.random() < buyProbability;
-    
-    // Only trade if score is high enough (bots are selective)
-    if (tradeScore < 15 && Math.random() > 0.3) {
-        // Skip this trade opportunity (30% chance to skip low-score trades)
+
+    if (action === 'wait') {
         return null;
     }
-    
-    // SMART QUANTITY CALCULATION
-    let quantity;
-    
-    if (shouldBuy) {
-        // Calculate optimal buy quantity
+
+    let quantity = 0;
+    const conviction = clamp(Math.max(buyUtility, sellUtility), 0.05, 2.5);
+
+    if (action === 'buy') {
         const maxAffordable = balance / currentPrice;
-        const targetInvestment = balance * 0.15; // Invest 15% of balance
-        const targetQuantity = targetInvestment / currentPrice;
-        
-        // Adjust based on confidence
-        const confidence = Math.abs(marketTrend) + (Math.abs(priceChange) / 10);
-        const adjustedQuantity = targetQuantity * (0.5 + confidence);
-        
-        quantity = Math.min(adjustedQuantity, maxAffordable * 0.8); // Max 80% of affordable
-        quantity = Math.max(0.5, quantity); // Minimum 0.5 units
+        if (maxAffordable < 0.15) return null;
+
+        const targetAllocation = clamp(0.08 + conviction * 0.09, 0.08, 0.28);
+        const desiredSpend = balance * targetAllocation;
+        quantity = clamp(desiredSpend / currentPrice, 0.15, maxAffordable * 0.75);
     } else {
-        // Calculate optimal sell quantity
-        const availableToSell = currentHolding;
-        if (availableToSell < 0.1) {
-            return null; // Nothing to sell
-        }
-        
-        // Sell 20-60% of holdings based on confidence
-        const confidence = Math.abs(marketTrend) + (Math.abs(priceChange) / 10);
-        const sellPercentage = 0.2 + (confidence * 0.4);
-        
-        quantity = availableToSell * sellPercentage;
-        quantity = Math.max(0.5, Math.min(quantity, availableToSell));
+        if (currentHolding < 0.15) return null;
+
+        const unwindRatio = clamp(0.15 + conviction * 0.18 + concentration * 0.35, 0.15, 0.85);
+        quantity = clamp(currentHolding * unwindRatio, 0.15, currentHolding);
     }
-    
-    // Round to 3 decimals
-    quantity = parseFloat(quantity.toFixed(3));
-    
+
+    quantity = Number(quantity.toFixed(3));
+    if (quantity <= 0) return null;
+
     return {
-        type: shouldBuy ? 'buy' : 'sell',
+        type: action,
         coin: coinId,
-        quantity: quantity,
+        quantity,
         price: currentPrice,
         timestamp: Date.now(),
         isBot: true,
-        confidence: tradeScore
+        confidence: Math.round(conviction * 25),
     };
 }
 
 export function calculateOrderBook(recentTrades, currentPrice, newsImpact = 0, marketTrend = 0) {
-    // Generate realistic order book based on recent trades and market conditions
     const buyOrders = [];
     const sellOrders = [];
-    
-    // Adjust order book based on market sentiment
-    const bullishMarket = newsImpact > 0 || marketTrend > 0;
-    const bearishMarket = newsImpact < 0 || marketTrend < 0;
-    
-    // More buy orders in bullish market, more sell orders in bearish
-    const buyOrderCount = bullishMarket ? 7 : bearishMarket ? 3 : 5;
-    const sellOrderCount = bearishMarket ? 7 : bullishMarket ? 3 : 5;
-    
-    // Generate buy orders below current price
-    for (let i = 1; i <= buyOrderCount; i++) {
-        const priceLevel = currentPrice * (1 - (i * 0.005)); // 0.5% intervals
-        const baseQuantity = bullishMarket ? 15 : 8; // More volume in bullish
-        const quantity = (Math.random() * baseQuantity + 5).toFixed(2);
+
+    const recentOrderFlow = recentTrades.slice(0, 10).reduce((acc, trade) => {
+        return acc + (trade.type === 'buy' ? trade.quantity : -trade.quantity);
+    }, 0);
+    const imbalance = clamp((recentOrderFlow / 25) + (marketTrend * 0.8) + (newsImpact * 0.6), -1.5, 1.5);
+    const spreadBase = 0.0035 + Math.abs(imbalance) * 0.0015;
+    const depthBase = 6 + recentTrades.length * 0.18;
+    const buyBias = sigmoid(imbalance);
+
+    for (let i = 1; i <= 6; i++) {
+        const priceOffset = spreadBase * i;
+        const bidPrice = currentPrice * (1 - priceOffset);
+        const askPrice = currentPrice * (1 + priceOffset);
+        const bidQuantity = Number((depthBase * (1.15 + buyBias) * (0.85 + Math.random() * 0.5) / Math.sqrt(i)).toFixed(2));
+        const askQuantity = Number((depthBase * (2.15 - buyBias) * (0.85 + Math.random() * 0.5) / Math.sqrt(i)).toFixed(2));
+
         buyOrders.push({
-            price: priceLevel.toFixed(2),
-            quantity: parseFloat(quantity),
-            total: (priceLevel * quantity).toFixed(2)
+            price: bidPrice.toFixed(2),
+            quantity: bidQuantity,
+            total: (bidPrice * bidQuantity).toFixed(2)
         });
-    }
-    
-    // Generate sell orders above current price
-    for (let i = 1; i <= sellOrderCount; i++) {
-        const priceLevel = currentPrice * (1 + (i * 0.005)); // 0.5% intervals
-        const baseQuantity = bearishMarket ? 15 : 8; // More volume in bearish
-        const quantity = (Math.random() * baseQuantity + 5).toFixed(2);
+
         sellOrders.push({
-            price: priceLevel.toFixed(2),
-            quantity: parseFloat(quantity),
-            total: (priceLevel * quantity).toFixed(2)
+            price: askPrice.toFixed(2),
+            quantity: askQuantity,
+            total: (askPrice * askQuantity).toFixed(2)
         });
     }
     
@@ -305,35 +302,47 @@ export function calculateOrderBook(recentTrades, currentPrice, newsImpact = 0, m
 }
 
 export function calculateCarbonFootprint(trades, holdings) {
-    let footprint = 0;
-    
-    // Each trade adds to footprint (reduced scale)
-    trades.forEach(trade => {
-        footprint += Math.abs(trade.quantity * trade.price * 0.001); // Reduced from 0.01
-    });
-    
-    // Holding coins reduces footprint over time
-    Object.values(holdings).forEach(holding => {
-        footprint -= holding.quantity * 0.0005; // Reduced from 0.002
-    });
-    
-    // Return absolute value, lower is better
-    // Scale: 0-5 Excellent, 5-15 Good, 15-20 Fair, 20+ Bad
-    return Math.max(0, Math.floor(footprint * 10) / 10); // Keep 1 decimal
+    const relevantTrades = trades.slice(-30);
+    const grossTurnover = relevantTrades.reduce((sum, trade) => {
+        const profile = COIN_MARKET_PROFILES[trade.coin] || COIN_MARKET_PROFILES.gaia;
+        return sum + (trade.quantity * trade.price * profile.miningIntensity);
+    }, 0);
+
+    const holdingEntries = Object.entries(holdings).filter(([, holding]) => holding?.quantity > 0);
+    const totalHoldingValue = holdingEntries.reduce((sum, [, holding]) => {
+        return sum + getHoldingValue(holding);
+    }, 0);
+
+    const concentrationPenalty = totalHoldingValue > 0
+        ? holdingEntries.reduce((sum, [coinId, holding]) => {
+            const weight = getHoldingValue(holding) / totalHoldingValue;
+            const profile = COIN_MARKET_PROFILES[coinId] || COIN_MARKET_PROFILES.gaia;
+            return sum + (weight * weight * profile.miningIntensity);
+        }, 0)
+        : 0;
+
+    const diversificationCredit = totalHoldingValue > 0
+        ? holdingEntries.reduce((sum, [coinId, holding]) => {
+            const weight = getHoldingValue(holding) / totalHoldingValue;
+            const profile = COIN_MARKET_PROFILES[coinId] || COIN_MARKET_PROFILES.gaia;
+            return sum + (weight * (1.35 - profile.miningIntensity));
+        }, 0)
+        : 0;
+
+    const churnPenalty = relevantTrades.length > 0 ? grossTurnover / 240 : 0;
+    const holdPenalty = concentrationPenalty * 6;
+    const sustainabilityRelief = diversificationCredit * 4;
+    const footprint = clamp(churnPenalty + holdPenalty - sustainabilityRelief, 0, 35);
+
+    return Number(footprint.toFixed(1));
 }
 
 export function calculateCarbonScorePenalty(carbonFootprint) {
-    // Higher footprint = bigger penalty to carbon score
-    // Scale: 0-5 = no penalty, 5-15 = -10 to -30, 15-20 = -30 to -50, 20+ = -50+
-    if (carbonFootprint < 5) {
-        return 0; // Excellent - no penalty
-    } else if (carbonFootprint < 15) {
-        return -Math.floor((carbonFootprint - 5) * 2); // -2 to -20
-    } else if (carbonFootprint < 20) {
-        return -20 - Math.floor((carbonFootprint - 15) * 6); // -20 to -50
-    } else {
-        return -50 - Math.floor((carbonFootprint - 20) * 5); // -50 and worse
-    }
+    if (carbonFootprint <= 4) return 2;
+    if (carbonFootprint <= 8) return 0;
+    if (carbonFootprint <= 14) return -Math.round((carbonFootprint - 8) * 1.8);
+    if (carbonFootprint <= 20) return -12 - Math.round((carbonFootprint - 14) * 2.8);
+    return -29 - Math.round((carbonFootprint - 20) * 3.5);
 }
 
 export function calculateCreditsEarned(rank, totalPlayers, carbonScore, profit) {
