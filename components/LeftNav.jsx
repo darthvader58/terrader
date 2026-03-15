@@ -26,8 +26,8 @@ const LeftNav = () => {
             borderRadius="full"
             backdropFilter="blur(20px)"
             boxShadow="0 18px 40px rgba(0, 0, 0, 0.3)"
-            px={{ base: 2, md: 3 }}
-            py={2}
+            px={{ base: 2, md: 3, lg: 3 }}
+            py={{ base: 2, lg: 6 }}
             maxW={{ base: "calc(100vw - 24px)", md: "auto" }}
         >
         <VStack
