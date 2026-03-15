@@ -43,15 +43,15 @@ const TradingPanel = ({
 
     return (
         <VStack spacing={4} w="100%" align="stretch">
-            <Box bg="brandBlack.100" p={4} borderRadius="lg">
-                <HStack justify="space-between" mb={4}>
+            <Box bg="brandBlack.100" p={{ base: 4, md: 5 }} borderRadius="xl" borderWidth="1px" borderColor="whiteAlpha.200">
+                <HStack justify="space-between" mb={4} align="start" flexWrap="wrap" spacing={4}>
                     <Stat>
                         <StatLabel fontSize="sm">Balance</StatLabel>
-                        <StatNumber fontSize="2xl">${balance.toFixed(2)}</StatNumber>
+                        <StatNumber fontSize={{ base: "xl", md: "2xl" }}>${balance.toFixed(2)}</StatNumber>
                     </Stat>
                     <Stat>
                         <StatLabel fontSize="sm">Holdings</StatLabel>
-                        <StatNumber fontSize="2xl">
+                        <StatNumber fontSize={{ base: "xl", md: "2xl" }}>
                             {maxSell.toFixed(3)} {selectedCoin?.symbol}
                         </StatNumber>
                     </Stat>
@@ -124,7 +124,7 @@ const TradingPanel = ({
                         </Button>
                     </HStack>
 
-                    <HStack spacing={2} fontSize="xs">
+                    <HStack spacing={2} fontSize="xs" flexWrap="wrap">
                         <Button
                             size="xs"
                             variant="ghost"

@@ -30,15 +30,15 @@ const NewsPanel = ({ news, loading }) => {
                         }}
                         transition="all 0.2s"
                     >
-                        <HStack justify="space-between" mb={2}>
+                        <HStack justify="space-between" mb={2} align="start" spacing={2}>
                             <Badge colorScheme="green" fontSize="xs">
                                 {item.coin}
                             </Badge>
-                            <Text fontSize="xs" color="gray.400">
+                            <Text fontSize="xs" color="gray.400" flexShrink={0}>
                                 {new Date(item.timestamp).toLocaleTimeString()}
                             </Text>
                         </HStack>
-                        <Text fontSize="sm" fontWeight="medium">
+                        <Text fontSize="sm" fontWeight="medium" lineHeight="tall">
                             {item.news}
                         </Text>
                     </Box>

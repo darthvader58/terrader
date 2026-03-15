@@ -6,6 +6,7 @@ import {
     Button,
     VStack,
     HStack,
+    Flex,
     Heading,
     Text,
     SimpleGrid,
@@ -318,20 +319,38 @@ const Lobby = () => {
                 <title>Game Lobby - Terrader</title>
             </Head>
             
-            <Box px={{ base: 6, md: 12, lg: 20 }} pt={10} minH="100vh">
+            <Box
+                px={{ base: 4, md: 8, lg: 16 }}
+                pt={{ base: 4, md: 8 }}
+                pb={{ base: 24, lg: 10 }}
+                minH="100vh"
+            >
                 <Nav />
                 <LeftNav />
 
-                <Box mt={12} px={{ base: 4, md: 12, lg: 32 }}>
+                <Box mt={{ base: 6, md: 10 }} px={{ base: 0, md: 4, lg: 16 }}>
                     <VStack spacing={8} align="stretch">
-                        <HStack justify="space-between">
-                            <Heading size="xl">Game Lobby</Heading>
-                            <HStack spacing={4}>
+                        <VStack align="stretch" spacing={{ base: 5, md: 6 }}>
+                            <VStack align="start" spacing={{ base: 2, md: 3 }}>
+                                <Heading size={{ base: "lg", md: "xl" }}>Game Lobby</Heading>
+                                <Text color="gray.300" fontSize={{ base: "sm", md: "md" }}>
+                                    Join an active market, start a private room, or jump straight into a quick match.
+                                </Text>
+                            </VStack>
+                            <Flex
+                                justify="center"
+                                align="center"
+                                wrap="wrap"
+                                columnGap={4}
+                                rowGap={4}
+                                w="100%"
+                            >
                                 <Button
                                     leftIcon={<Icon as={FaPlay} />}
                                     colorScheme="green"
                                     size="lg"
                                     onClick={handleQuickPlay}
+                                    minW={{ base: "220px", md: "180px" }}
                                 >
                                     Quick Play
                                 </Button>
@@ -339,6 +358,7 @@ const Lobby = () => {
                                     colorScheme="purple"
                                     size="lg"
                                     onClick={onInviteOpen}
+                                    minW={{ base: "220px", md: "180px" }}
                                 >
                                     Join by Code
                                 </Button>
@@ -347,11 +367,12 @@ const Lobby = () => {
                                     colorScheme="blue"
                                     size="lg"
                                     onClick={onOpen}
+                                    minW={{ base: "220px", md: "180px" }}
                                 >
                                     Create Room
                                 </Button>
-                            </HStack>
-                        </HStack>
+                            </Flex>
+                        </VStack>
 
                         <Box
                             bg="glass"
@@ -362,7 +383,7 @@ const Lobby = () => {
                             borderColor="blue.400"
                             boxShadow="0 8px 32px rgba(66, 153, 225, 0.2)"
                         >
-                            <HStack spacing={4}>
+                            <HStack spacing={4} align="start">
                                 <Icon as={FaTrophy} color="yellow.400" boxSize={6} />
                                 <VStack align="start" spacing={0}>
                                     <Text fontWeight="bold" fontSize="lg">
@@ -376,8 +397,8 @@ const Lobby = () => {
                         </Box>
 
                         <Tabs colorScheme="green" variant="enclosed">
-                            <TabList>
-                                <Tab>All Rooms ({rooms.length})</Tab>
+                            <TabList overflowX="auto" overflowY="hidden" py={1}>
+                                <Tab whiteSpace="nowrap">All Rooms ({rooms.length})</Tab>
                                 <Tab>Global Rooms</Tab>
                                 <Tab>Public Rooms</Tab>
                             </TabList>
@@ -449,7 +470,7 @@ const Lobby = () => {
             </Box>
 
             {/* Create Room Modal */}
-            <Modal isOpen={isOpen} onClose={onClose}>
+            <Modal isOpen={isOpen} onClose={onClose} isCentered size={{ base: "sm", md: "md" }}>
                 <ModalOverlay />
                 <ModalContent bg="brandBlack.200">
                     <ModalHeader>Create Game Room</ModalHeader>
@@ -515,7 +536,7 @@ const Lobby = () => {
             </Modal>
 
             {/* Join by Invite Code Modal */}
-            <Modal isOpen={isInviteOpen} onClose={onInviteClose}>
+            <Modal isOpen={isInviteOpen} onClose={onInviteClose} isCentered size={{ base: "sm", md: "md" }}>
                 <ModalOverlay />
                 <ModalContent bg="brandBlack.200">
                     <ModalHeader>Join by Invite Code</ModalHeader>
@@ -561,7 +582,7 @@ const RoomCard = ({ room, onJoin, getRoomTypeIcon, getRoomTypeColor }) => {
         <Box
             bg="brandBlack.100"
             backdropFilter="blur(10px)"
-            p={6}
+            p={{ base: 5, md: 6 }}
             borderRadius="xl"
             borderWidth={2}
             borderColor="whiteAlpha.200"
@@ -574,13 +595,13 @@ const RoomCard = ({ room, onJoin, getRoomTypeIcon, getRoomTypeColor }) => {
             transition="all 0.3s"
         >
             <VStack align="stretch" spacing={4}>
-                <HStack justify="space-between">
-                    <HStack>
+                <HStack justify="space-between" align="start" spacing={3}>
+                    <HStack align="start">
                         <Icon
                             as={getRoomTypeIcon(room.roomType)}
                             color={getRoomTypeColor(room.roomType)}
                         />
-                        <Text fontWeight="bold" fontSize="lg">
+                        <Text fontWeight="bold" fontSize={{ base: "md", md: "lg" }}>
                             {room.roomType === ROOM_TYPES.GLOBAL ? 'Global Room' : `Room #${room.roomId.slice(-6)}`}
                         </Text>
                     </HStack>

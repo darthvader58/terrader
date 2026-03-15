@@ -2,7 +2,7 @@ import { HStack, Button, Badge, Text, VStack } from "@chakra-ui/react";
 
 const CoinSelector = ({ coins, selectedCoin, onSelect, prices }) => {
     return (
-        <HStack spacing={3} w="100%" overflowX="auto" pb={2}>
+        <HStack spacing={3} w="100%" overflowX="auto" pb={2} px={1}>
             {coins.map((coin) => (
                 <Button
                     key={coin.id}
@@ -10,9 +10,10 @@ const CoinSelector = ({ coins, selectedCoin, onSelect, prices }) => {
                     variant={selectedCoin?.id === coin.id ? "solid" : "outline"}
                     colorScheme={selectedCoin?.id === coin.id ? "green" : "gray"}
                     size="md"
-                    minW="140px"
+                    minW={{ base: "120px", md: "140px" }}
                     h="auto"
-                    py={3}
+                    py={{ base: 2.5, md: 3 }}
+                    px={{ base: 3, md: 4 }}
                     borderWidth={2}
                     borderColor={selectedCoin?.id === coin.id ? coin.color : "gray.600"}
                     _hover={{
@@ -22,7 +23,7 @@ const CoinSelector = ({ coins, selectedCoin, onSelect, prices }) => {
                     transition="all 0.2s"
                 >
                     <VStack spacing={1} align="stretch">
-                        <Text fontWeight="bold" fontSize="sm">
+                        <Text fontWeight="bold" fontSize={{ base: "xs", md: "sm" }}>
                             {coin.symbol}
                         </Text>
                         <Badge

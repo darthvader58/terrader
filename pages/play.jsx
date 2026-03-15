@@ -804,11 +804,28 @@ const Play = () => {
 
     return (
         <Protect>
-            <Flex h="100vh" overflow="hidden">
-                <Box flex={1} p={6} overflowY="auto">
-                    <VStack spacing={6} align="stretch">
-                        <HStack justify="space-between">
-                            <HStack spacing={6}>
+            <Flex
+                minH="100vh"
+                direction={{ base: "column", xl: "row" }}
+                overflow="hidden"
+            >
+                <Box
+                    flex={1}
+                    p={{ base: 4, md: 6, xl: 8 }}
+                    pb={{ base: 28, xl: 8 }}
+                    overflowY="auto"
+                >
+                    <VStack spacing={{ base: 4, md: 6 }} align="stretch">
+                        <Box
+                            bg="rgba(8, 14, 13, 0.78)"
+                            borderWidth="1px"
+                            borderColor="whiteAlpha.200"
+                            borderRadius={{ base: "2xl", md: "28px" }}
+                            p={{ base: 4, md: 6 }}
+                            boxShadow="0 22px 50px rgba(0, 0, 0, 0.25)"
+                        >
+                        <HStack justify="space-between" align="stretch" flexDir={{ base: "column", lg: "row" }} spacing={{ base: 5, lg: 8 }}>
+                            <HStack spacing={{ base: 4, md: 6 }} align="stretch" flexWrap="wrap">
                                 <Stat>
                                     <StatLabel>{profit >= 0 ? 'Your Profit' : 'Your Loss'}</StatLabel>
                                     <StatNumber color={profit >= 0 ? "green.400" : "red.400"}>
@@ -828,7 +845,7 @@ const Play = () => {
                                     <StatHelpText>
                                         {carbonFootprint < 5 ? "Excellent" : carbonFootprint < 15 ? "Good" : carbonFootprint < 20 ? "Fair" : "Bad"}
                                     </StatHelpText>
-                                    <Box mt={2} w="150px">
+                                    <Box mt={2} w={{ base: "100%", md: "150px" }}>
                                         <Progress 
                                             value={(carbonFootprint / 30) * 100} 
                                             colorScheme={carbonFootprint < 5 ? "green" : carbonFootprint < 15 ? "yellow" : carbonFootprint < 20 ? "orange" : "red"}
@@ -839,14 +856,14 @@ const Play = () => {
                                 </Stat>
                             </HStack>
                             
-                            <Stat textAlign="center">
+                            <Stat textAlign="center" alignSelf="center">
                                 <StatLabel>
                                     <HStack justify="center">
                                         <TimeIcon />
                                         <Text>Time Remaining</Text>
                                     </HStack>
                                 </StatLabel>
-                                <StatNumber fontSize="4xl">
+                                <StatNumber fontSize={{ base: "3xl", md: "4xl" }}>
                                     {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
                                 </StatNumber>
                                 <Button
@@ -896,7 +913,7 @@ const Play = () => {
                                 </Button>
                             </Stat>
                             
-                            <HStack spacing={6}>
+                            <HStack spacing={{ base: 4, md: 6 }} justify={{ base: "space-between", lg: "flex-end" }} align="start" flexWrap="wrap">
                                 <Stat textAlign="right">
                                     <StatLabel>
                                         <HStack justify="flex-end">
@@ -912,7 +929,7 @@ const Play = () => {
                                     <StatHelpText>Rank: #{leaderboardRank || '—'}</StatHelpText>
                                 </Stat>
                                 
-                                <VStack spacing={1} align="flex-end">
+                                <VStack spacing={1} align={{ base: "start", lg: "flex-end" }}>
                                     <Text fontSize="xs" color="gray.400">Power-Ups</Text>
                                     <HStack spacing={1}>
                                         {Object.keys(activePowerUps).length === 0 ? (
@@ -938,6 +955,7 @@ const Play = () => {
                                 </VStack>
                             </HStack>
                         </HStack>
+                        </Box>
 
                         <CoinSelector
                             coins={CRYPTO_COINS}
@@ -946,7 +964,16 @@ const Play = () => {
                             prices={prices}
                         />
 
-                        <Box bg="brandBlack.100" p={6} borderRadius="xl" h="500px" backdropFilter="blur(10px)" boxShadow="0 4px 16px rgba(0, 0, 0, 0.3)">
+                        <Box
+                            bg="brandBlack.100"
+                            p={{ base: 4, md: 6 }}
+                            borderRadius="xl"
+                            h={{ base: "320px", md: "420px", xl: "500px" }}
+                            backdropFilter="blur(10px)"
+                            borderWidth="1px"
+                            borderColor="whiteAlpha.200"
+                            boxShadow="0 4px 16px rgba(0, 0, 0, 0.3)"
+                        >
                             <Graph 
                                 data={priceHistory[selectedCoin.id]} 
                                 selectedCoin={selectedCoin}
@@ -956,14 +983,16 @@ const Play = () => {
                 </Box>
 
                 <Box
-                    w="400px"
-                    bg="glass"
+                    w={{ base: "100%", xl: "400px" }}
+                    bg="rgba(10, 15, 16, 0.82)"
                     backdropFilter="blur(20px)"
-                    p={6}
+                    p={{ base: 4, md: 6 }}
                     overflowY="auto"
-                    borderLeft="1px solid"
+                    borderLeft={{ base: "none", xl: "1px solid" }}
+                    borderTop={{ base: "1px solid", xl: "none" }}
                     borderColor="whiteAlpha.200"
                     boxShadow="-4px 0 16px rgba(0, 0, 0, 0.2)"
+                    maxH={{ base: "none", xl: "100vh" }}
                 >
                     <VStack spacing={6} align="stretch">
                         <TradingPanel
@@ -977,10 +1006,10 @@ const Play = () => {
                         <Divider />
 
                         <Tabs variant="soft-rounded" colorScheme="green" size="sm">
-                            <TabList>
-                                <Tab fontSize="xs">Order Book</Tab>
-                                <Tab fontSize="xs">Trades</Tab>
-                                <Tab fontSize="xs">Depth</Tab>
+                            <TabList overflowX="auto" overflowY="hidden" py={1}>
+                                <Tab fontSize="xs" whiteSpace="nowrap">Order Book</Tab>
+                                <Tab fontSize="xs" whiteSpace="nowrap">Trades</Tab>
+                                <Tab fontSize="xs" whiteSpace="nowrap">Depth</Tab>
                             </TabList>
                             <TabPanels>
                                 <TabPanel px={0}>
