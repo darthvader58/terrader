@@ -10,6 +10,7 @@ import {
     Text,
     VStack,
     HStack,
+    Flex,
     SimpleGrid,
     Button,
     Divider,
@@ -28,6 +29,7 @@ import {
     Tab,
     TabPanel,
     Image,
+    TableContainer,
 } from "@chakra-ui/react";
 import { POWER_UPS } from "@/utils/gameLogic";
 import { getUserGameHistory } from "@/utils/gameRoom";
@@ -226,16 +228,21 @@ const Profile = () => {
 
     return (
         <Protect>
-            <Box px={{ base: 6, md: 12, lg: 20 }} pt={10} minH="100vh">
+            <Box
+                px={{ base: 4, md: 8, lg: 16 }}
+                pt={{ base: 4, md: 8 }}
+                pb={{ base: 24, lg: 10 }}
+                minH="100vh"
+            >
                 <Nav />
                 <LeftNav />
 
-                <Box px={{ base: 4, md: 12, lg: 48 }} mt={12}>
+                <Box px={{ base: 0, md: 4, lg: 16 }} mt={{ base: 6, md: 10 }}>
                     <Tabs colorScheme="green" variant="enclosed">
-                        <TabList>
-                            <Tab>Profile</Tab>
-                            <Tab>Game History</Tab>
-                            <Tab>Power-ups</Tab>
+                        <TabList overflowX="auto" overflowY="hidden" py={1}>
+                            <Tab whiteSpace="nowrap">Profile</Tab>
+                            <Tab whiteSpace="nowrap">Game History</Tab>
+                            <Tab whiteSpace="nowrap">Power-ups</Tab>
                         </TabList>
 
                         <TabPanels>
@@ -244,14 +251,19 @@ const Profile = () => {
                                     <Box 
                                         bg="glass" 
                                         backdropFilter="blur(15px)"
-                                        p={8} 
+                                        p={{ base: 4, md: 8 }} 
                                         borderRadius="xl" 
                                         borderWidth={2}
                                         borderColor="whiteAlpha.200"
                                         boxShadow="0 8px 32px rgba(0, 0, 0, 0.3)"
                                     >
-                                        <HStack spacing={8} mb={6}>
-                                            <VStack>
+                                        <Flex
+                                            gap={{ base: 5, md: 8 }}
+                                            mb={6}
+                                            direction={{ base: "column", md: "row" }}
+                                            align={{ base: "start", md: "center" }}
+                                        >
+                                            <VStack align={{ base: "start", md: "center" }}>
                                                 <Box
                                                     borderRadius="full"
                                                     overflow="hidden"
@@ -261,14 +273,14 @@ const Profile = () => {
                                                     cursor="pointer"
                                                     onClick={() => document.getElementById('profile-pic-upload').click()}
                                                     _hover={{ opacity: 0.8 }}
-                                                    w="80px"
-                                                    h="80px"
+                                                    w={{ base: "96px", md: "120px" }}
+                                                    h={{ base: "96px", md: "120px" }}
                                                 >
                                                     <Image
                                                         src={user?.photoURL || "/assets/avatar.svg"}
                                                         alt="avatar"
-                                                        w="80px"
-                                                        h="80px"
+                                                        w="100%"
+                                                        h="100%"
                                                         objectFit="cover"
                                                     />
                                                 </Box>
@@ -281,17 +293,23 @@ const Profile = () => {
                                                 />
                                                 <Text fontSize="xs" color="gray.500">Click to change</Text>
                                             </VStack>
-                                            <VStack align="start" flex={1} spacing={2}>
-                                                <HStack w="full">
+                                            <VStack align="start" flex={1} spacing={3} w="100%">
+                                                <Flex
+                                                    w="100%"
+                                                    gap={3}
+                                                    direction={{ base: "column", sm: "row" }}
+                                                    align={{ base: "stretch", sm: "center" }}
+                                                >
                                                     <Input
                                                         value={username}
                                                         onChange={(e) => setUsername(e.target.value)}
                                                         size="lg"
                                                         fontWeight="bold"
-                                                        fontSize="2xl"
+                                                        fontSize={{ base: "xl", md: "2xl" }}
                                                         isReadOnly={!editing}
                                                         variant={editing ? "outline" : "filled"}
                                                         bg="brandBlack.200"
+                                                        minW={0}
                                                     />
                                                     {!editing ? (
                                                         <IconButton
@@ -299,6 +317,7 @@ const Profile = () => {
                                                             onClick={() => setEditing(true)}
                                                             colorScheme="blue"
                                                             aria-label="Edit username"
+                                                            alignSelf={{ base: "flex-start", sm: "center" }}
                                                         />
                                                     ) : (
                                                         <HStack>
@@ -320,8 +339,8 @@ const Profile = () => {
                                                             />
                                                         </HStack>
                                                     )}
-                                                </HStack>
-                                                <HStack>
+                                                </Flex>
+                                                <HStack spacing={3} flexWrap="wrap">
                                                     <Badge colorScheme="green" fontSize="md" px={3} py={1}>
                                                         Level {user?.level || 1}
                                                     </Badge>
@@ -330,32 +349,32 @@ const Profile = () => {
                                                     </Badge>
                                                 </HStack>
                                             </VStack>
-                                        </HStack>
+                                        </Flex>
 
                                         <Divider my={6} />
 
                                         <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
-                                            <Box bg="brandBlack.100" p={4} borderRadius="lg">
+                                            <Box bg="brandBlack.100" p={{ base: 4, md: 5 }} borderRadius="lg" minW={0}>
                                                 <Text fontSize="sm" color="gray.400" mb={2}>
                                                     Total Games
                                                 </Text>
-                                                <Text fontSize="3xl" fontWeight="bold">
+                                                <Text fontSize={{ base: "2xl", md: "3xl" }} fontWeight="bold">
                                                     {user?.totalGames || 0}
                                                 </Text>
                                             </Box>
-                                            <Box bg="brandBlack.100" p={4} borderRadius="lg">
+                                            <Box bg="brandBlack.100" p={{ base: 4, md: 5 }} borderRadius="lg" minW={0}>
                                                 <Text fontSize="sm" color="gray.400" mb={2}>
                                                     Total Carbon Score
                                                 </Text>
-                                                <Text fontSize="3xl" fontWeight="bold" color="green.400">
+                                                <Text fontSize={{ base: "2xl", md: "3xl" }} fontWeight="bold" color="green.400">
                                                     {user?.carbonScore || 0}
                                                 </Text>
                                             </Box>
-                                            <Box bg="brandBlack.100" p={4} borderRadius="lg">
+                                            <Box bg="brandBlack.100" p={{ base: 4, md: 5 }} borderRadius="lg" minW={0}>
                                                 <Text fontSize="sm" color="gray.400" mb={2}>
                                                     Highest Rank
                                                 </Text>
-                                                <Text fontSize="3xl" fontWeight="bold" color="blue.400">
+                                                <Text fontSize={{ base: "2xl", md: "3xl" }} fontWeight="bold" color="blue.400">
                                                     {user?.highestRank || "N/A"}
                                                 </Text>
                                             </Box>
@@ -368,7 +387,7 @@ const Profile = () => {
                                 <Box 
                                     bg="glass" 
                                     backdropFilter="blur(15px)"
-                                    p={8} 
+                                    p={{ base: 4, md: 8 }} 
                                     borderRadius="xl" 
                                     borderWidth={2}
                                     borderColor="whiteAlpha.200"
@@ -379,34 +398,72 @@ const Profile = () => {
                                             No games played yet. Start playing to see your history!
                                         </Text>
                                     ) : (
-                                        <Table variant="simple">
-                                            <Thead>
-                                                <Tr>
-                                                    <Th>Rank</Th>
-                                                    <Th>Players</Th>
-                                                    <Th>Carbon Score</Th>
-                                                    <Th>Credits Earned</Th>
-                                                    <Th>Type</Th>
-                                                </Tr>
-                                            </Thead>
-                                            <Tbody>
+                                        <>
+                                            <VStack display={{ base: "flex", md: "none" }} spacing={4} align="stretch">
                                                 {gameHistory.map((game, index) => (
-                                                    <Tr key={game.id || index}>
-                                                        <Td>
+                                                    <Box
+                                                        key={game.id || index}
+                                                        bg="brandBlack.100"
+                                                        borderWidth="1px"
+                                                        borderColor="whiteAlpha.200"
+                                                        borderRadius="xl"
+                                                        p={4}
+                                                    >
+                                                        <HStack justify="space-between" mb={3} align="start">
                                                             <Badge colorScheme={game.rank <= 3 ? "green" : "gray"}>
                                                                 #{game.rank || '?'}
                                                             </Badge>
-                                                        </Td>
-                                                        <Td>{game.totalPlayers || 0}</Td>
-                                                        <Td color="green.400">{game.carbonScore || 0}</Td>
-                                                        <Td>{game.creditsEarned || 0}</Td>
-                                                        <Td>
                                                             <Badge>{game.roomType || 'PUBLIC'}</Badge>
-                                                        </Td>
-                                                    </Tr>
+                                                        </HStack>
+                                                        <SimpleGrid columns={2} spacing={3}>
+                                                            <Box>
+                                                                <Text fontSize="xs" color="gray.500" textTransform="uppercase">Players</Text>
+                                                                <Text fontWeight="semibold">{game.totalPlayers || 0}</Text>
+                                                            </Box>
+                                                            <Box>
+                                                                <Text fontSize="xs" color="gray.500" textTransform="uppercase">Carbon Score</Text>
+                                                                <Text fontWeight="semibold" color="green.400">{game.carbonScore || 0}</Text>
+                                                            </Box>
+                                                            <Box>
+                                                                <Text fontSize="xs" color="gray.500" textTransform="uppercase">Credits</Text>
+                                                                <Text fontWeight="semibold">{game.creditsEarned || 0}</Text>
+                                                            </Box>
+                                                        </SimpleGrid>
+                                                    </Box>
                                                 ))}
-                                            </Tbody>
-                                        </Table>
+                                            </VStack>
+
+                                            <TableContainer display={{ base: "none", md: "block" }} overflowX="auto">
+                                                <Table variant="simple">
+                                                    <Thead>
+                                                        <Tr>
+                                                            <Th>Rank</Th>
+                                                            <Th>Players</Th>
+                                                            <Th>Carbon Score</Th>
+                                                            <Th>Credits Earned</Th>
+                                                            <Th>Type</Th>
+                                                        </Tr>
+                                                    </Thead>
+                                                    <Tbody>
+                                                        {gameHistory.map((game, index) => (
+                                                            <Tr key={game.id || index}>
+                                                                <Td>
+                                                                    <Badge colorScheme={game.rank <= 3 ? "green" : "gray"}>
+                                                                        #{game.rank || '?'}
+                                                                    </Badge>
+                                                                </Td>
+                                                                <Td>{game.totalPlayers || 0}</Td>
+                                                                <Td color="green.400">{game.carbonScore || 0}</Td>
+                                                                <Td>{game.creditsEarned || 0}</Td>
+                                                                <Td>
+                                                                    <Badge>{game.roomType || 'PUBLIC'}</Badge>
+                                                                </Td>
+                                                            </Tr>
+                                                        ))}
+                                                    </Tbody>
+                                                </Table>
+                                            </TableContainer>
+                                        </>
                                     )}
                                 </Box>
                             </TabPanel>
@@ -418,7 +475,7 @@ const Profile = () => {
                                         <Text color="gray.400" mb={6}>
                                             Purchase power-ups to use during gameplay
                                         </Text>
-                                        <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6}>
+                                        <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={6}>
                                             {POWER_UPS.map((power, i) => {
                                                 const IconComponent = iconMap[power.icon];
                                                 const owned = ownedPowerUps.includes(power.id);
